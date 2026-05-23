@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { validateLoginForm } from '../utils/validators'
@@ -69,9 +69,6 @@ export default function LoginPage() {
     setGeneralError('')
     try {
       await loginWithGoogle()
-      // loginWithGoogle actualiza pendingGoogleData de forma asincrona,
-      // pero como el state se actualiza despues del await, revisamos
-      // si hubo redireccion en el proximo render
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error con la autenticacion de Google'
       setGeneralError(message)
@@ -80,11 +77,12 @@ export default function LoginPage() {
     }
   }
 
-  // Redirigir segun resultado de Google auth
-  // Se usa un efecto indirecto: si pendingGoogleData aparece, redirigir
-  if (pendingGoogleData) {
-    navigate('/registro/google-username')
-  }
+  // Redirigir cuando pendingGoogleData cambie (nuevo usuario Google)
+  useEffect(() => {
+    if (pendingGoogleData) {
+      navigate('/registro/google-username')
+    }
+  }, [pendingGoogleData, navigate])
 
   const getInputClass = (field: keyof LoginFormData) => {
     return errors[field] ? 'auth-input input-error' : 'auth-input'

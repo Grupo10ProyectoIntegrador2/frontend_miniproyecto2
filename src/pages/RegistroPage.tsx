@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { checkUsernameAvailable } from '../services/auth.service'
@@ -175,12 +175,6 @@ export default function RegistroPage() {
     setGeneralError('')
     try {
       await loginWithGoogle()
-      // Si es usuario nuevo, redirigir a completar perfil
-      if (pendingGoogleData) {
-        navigate('/registro/google-username')
-      } else {
-        navigate('/dashboard')
-      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error con la autenticacion de Google'
       setGeneralError(message)
@@ -189,8 +183,12 @@ export default function RegistroPage() {
     }
   }
 
-  // Despues de loginWithGoogle, el pendingGoogleData se actualiza asincrono,
-  // verificar en un efecto no es necesario porque navigate ya se llama arriba
+  // Redirigir cuando el contexto actualice pendingGoogleData despues del login con Google
+  useEffect(() => {
+    if (pendingGoogleData) {
+      navigate('/registro/google-username')
+    }
+  }, [pendingGoogleData, navigate])
 
   const getInputClass = (field: keyof RegisterFormData) => {
     const base = 'auth-input'
