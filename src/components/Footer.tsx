@@ -22,7 +22,7 @@ function Footer() {
             <span className="font-medium text-foreground">Salon de Estudio</span>
           </Link>
           <p className="text-center text-sm text-muted-foreground">
-            2024 Salon de Estudio Colaborativo. Disenado para estudiantes universitarios.
+            2026 Salon de Estudio Colaborativo. Diseñado para estudiantes universitarios.
           </p>
         </div>
       </div>

@@ -296,7 +296,7 @@ export default function RegistroPage() {
                 id="registro-username"
                 type="text"
                 className={`${getInputClass('username')} pl-7`}
-                placeholder="mi_usuario"
+                placeholder="  mi_usuario"
                 value={form.username}
                 onChange={(e) => {
                   updateField('username', e.target.value)

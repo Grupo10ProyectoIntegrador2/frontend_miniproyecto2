@@ -179,7 +179,7 @@ export default function RegistroGoogleUsernamePage() {
                 id="google-username"
                 type="text"
                 className={`${inputClass} pl-7`}
-                placeholder="mi_usuario"
+                placeholder="  mi_usuario"
                 value={username}
                 onChange={(e) => {
                   setUsername(e.target.value)

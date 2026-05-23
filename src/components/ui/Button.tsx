@@ -5,7 +5,7 @@ const Button = forwardRef(function Button(
   { className, variant = 'default', size = 'default', asChild = false, children, ...props },
   ref
 ) {
-  const baseStyles = 'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50'
+  const baseStyles = 'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50'
 
   const variants = {
     default: 'bg-primary text-primary-foreground hover:bg-primary/90',
