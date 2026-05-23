@@ -1,33 +1,33 @@
 /**
  * AppRouter.tsx
- * Define todas las rutas SPA del Salón de Estudio Colaborativo.
+ * Define todas las rutas SPA del Salon de Estudio Colaborativo.
  *
- * Rutas públicas (sin autenticación requerida):
- *   /                        → LandingPage
- *   /login                   → LoginPage
- *   /registro                → RegistroPage
- *   /registro/google-username → RegistroGoogleUsernamePage
- *   /404                     → NotFoundPage
- *   *                        → Redirige a /404
+ * Rutas publicas (sin autenticacion requerida):
+ *   /                         -> LandingPage
+ *   /login                    -> LoginPage (redirige a dashboard si ya autenticado)
+ *   /registro                 -> RegistroPage (redirige a dashboard si ya autenticado)
+ *   /registro/google-username -> RegistroGoogleUsernamePage
+ *   /404                      -> NotFoundPage
+ *   *                         -> Redirige a /404
  *
- * Rutas protegidas (requieren autenticación - Sprint 1 conectará Firebase Auth):
- *   /dashboard               → DashboardPage
- *   /perfil                  → PerfilPage
- *   /salas/crear             → SalasCrearPage
- *   /salas/:roomId           → SalaRoomPage
- *   /salas/:roomId/configurar → SalasConfigurarPage
- *   /unirse                  → UnirsePage
+ * Rutas protegidas (requieren autenticacion):
+ *   /dashboard                -> DashboardPage
+ *   /perfil                   -> PerfilPage
+ *   /salas/crear              -> SalasCrearPage
+ *   /salas/:roomId            -> SalaRoomPage
+ *   /salas/:roomId/configurar -> SalasConfigurarPage
+ *   /unirse                   -> UnirsePage
  */
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 
-// Pages — públicas
+// Paginas publicas
 import LandingPage from '../pages/LandingPage'
 import LoginPage from '../pages/LoginPage'
 import RegistroPage from '../pages/RegistroPage'
 import RegistroGoogleUsernamePage from '../pages/RegistroGoogleUsernamePage'
 import NotFoundPage from '../pages/NotFoundPage'
 
-// Pages — protegidas
+// Paginas protegidas
 import DashboardPage from '../pages/DashboardPage'
 import PerfilPage from '../pages/PerfilPage'
 import SalasCrearPage from '../pages/SalasCrearPage'
@@ -35,21 +35,40 @@ import SalaRoomPage from '../pages/SalaRoomPage'
 import SalasConfigurarPage from '../pages/SalasConfigurarPage'
 import UnirsePage from '../pages/UnirsePage'
 
-// Guard
+// Guards de ruta
 import ProtectedRoute from '../components/common/ProtectedRoute'
+import PublicOnlyRoute from '../components/common/PublicOnlyRoute'
 
 export default function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* ── Rutas públicas ── */}
+        {/* Rutas publicas */}
         <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/registro" element={<RegistroPage />} />
-        <Route path="/registro/google-username" element={<RegistroGoogleUsernamePage />} />
+
+        <Route
+          path="/login"
+          element={
+            <PublicOnlyRoute>
+              <LoginPage />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route
+          path="/registro"
+          element={
+            <PublicOnlyRoute>
+              <RegistroPage />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route
+          path="/registro/google-username"
+          element={<RegistroGoogleUsernamePage />}
+        />
         <Route path="/404" element={<NotFoundPage />} />
 
-        {/* ── Rutas protegidas ── */}
+        {/* Rutas protegidas */}
         <Route
           path="/dashboard"
           element={
@@ -99,7 +118,7 @@ export default function AppRouter() {
           }
         />
 
-        {/* ── Catch-all → 404 ── */}
+        {/* Catch-all */}
         <Route path="*" element={<Navigate to="/404" replace />} />
       </Routes>
     </BrowserRouter>
