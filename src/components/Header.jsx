@@ -34,7 +34,7 @@ function Header() {
             <Link to="/login">Iniciar Sesion</Link>
           </Button>
           <Button asChild>
-            <Link to="/register">Registrarse</Link>
+            <Link to="/registro">Registrarse</Link>
           </Button>
         </nav>
 
@@ -85,7 +85,7 @@ function Header() {
               <Link to="/login">Iniciar Sesion</Link>
             </Button>
             <Button className="w-full" asChild>
-              <Link to="/register">Registrarse</Link>
+              <Link to="/registro">Registrarse</Link>
             </Button>
           </nav>
         </div>

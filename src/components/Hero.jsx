@@ -19,7 +19,7 @@ function Hero() {
         </p>
         <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
           <Button size="lg" className="w-full sm:w-auto" asChild>
-            <Link to="/register">Comenzar Ahora</Link>
+            <Link to="/registro">Comenzar Ahora</Link>
           </Button>
           <Button variant="outline" size="lg" className="w-full sm:w-auto" asChild>
             <Link to="/login">Ya tengo cuenta</Link>
