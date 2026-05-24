@@ -22,10 +22,10 @@ export function validateEmail(email: string): string | null {
 
 export function validatePassword(password: string): string | null {
   if (!password) {
-    return 'La contrasena es obligatoria'
+    return 'La contraseña es obligatoria'
   }
   if (password.length < 8) {
-    return 'La contrasena debe tener al menos 8 caracteres'
+    return 'La contraseña debe tener al menos 8 caracteres'
   }
   if (!/[A-Z]/.test(password)) {
     return 'Debe incluir al menos una letra mayuscula'
@@ -54,10 +54,10 @@ export function validateUsername(username: string): string | null {
 
 export function validateConfirmPassword(password: string, confirm: string): string | null {
   if (!confirm) {
-    return 'Confirma tu contrasena'
+    return 'Confirma tu contraseña'
   }
   if (password !== confirm) {
-    return 'Las contrasenas no coinciden'
+    return 'Las contraseñas no coinciden'
   }
   return null
 }
@@ -96,7 +96,7 @@ export function validateLoginForm(data: LoginFormData): FieldErrors<LoginFormDat
   const emailError = validateEmail(data.email)
   if (emailError) errors.email = emailError
 
-  const passwordError = validateRequired(data.password, 'La contrasena')
+  const passwordError = validateRequired(data.password, 'La contraseña')
   if (passwordError) errors.password = passwordError
 
   return errors

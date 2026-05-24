@@ -295,8 +295,9 @@ export default function RegistroPage() {
               <input
                 id="registro-username"
                 type="text"
-                className={`${getInputClass('username')} pl-7`}
-                placeholder="  mi_usuario"
+                className={`${getInputClass('username')}`}
+                style={{ paddingLeft: '1.75rem' }}
+                placeholder="mi_usuario"
                 value={form.username}
                 onChange={(e) => {
                   updateField('username', e.target.value)
@@ -352,7 +353,7 @@ export default function RegistroPage() {
           </FormField>
 
           <FormField
-            label="Contrasena"
+            label="Contraseña"
             id="registro-password"
             error={errors.password}
             hint="Minimo 8 caracteres, 1 mayuscula y 1 numero"
@@ -362,7 +363,7 @@ export default function RegistroPage() {
               id="registro-password"
               type="password"
               className={getInputClass('password')}
-              placeholder="Tu contrasena"
+              placeholder="Tu contraseña"
               value={form.password}
               onChange={(e) => updateField('password', e.target.value)}
               onBlur={() => handleBlur('password')}
@@ -372,17 +373,17 @@ export default function RegistroPage() {
           </FormField>
 
           <FormField
-            label="Confirmar contrasena"
+            label="Confirmar contraseña"
             id="registro-confirm-password"
             error={errors.confirmPassword}
-            hint="Repite tu contrasena"
+            hint="Repite tu contraseña"
             required
           >
             <input
               id="registro-confirm-password"
               type="password"
               className={getInputClass('confirmPassword')}
-              placeholder="Repite tu contrasena"
+              placeholder="Repite tu contraseña"
               value={form.confirmPassword}
               onChange={(e) => updateField('confirmPassword', e.target.value)}
               onBlur={() => handleBlur('confirmPassword')}

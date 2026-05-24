@@ -6,6 +6,9 @@ import {
   useCallback,
   type ReactNode,
 } from 'react'
+import { onAuthStateChanged } from 'firebase/auth'
+import { doc, getDoc } from 'firebase/firestore'
+import { auth, db } from '../lib/firebase'
 import type {
   UserProfile,
   RegisterFormData,
@@ -27,62 +30,50 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
-const STORAGE_KEY = 'salon_auth_user'
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [pendingGoogleData, setPendingGoogleData] = useState<GoogleAuthResult | null>(null)
 
-  // Restaurar sesion desde localStorage al montar.
-  // Con Firebase esto se reemplaza por onAuthStateChanged.
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY)
-      if (stored) {
-        setUser(JSON.parse(stored))
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid))
+          if (userDoc.exists()) {
+            setUser(userDoc.data() as UserProfile)
+          } else {
+            setUser(null)
+          }
+        } catch (error) {
+          console.error("Error obteniendo perfil:", error)
+          setUser(null)
+        }
+      } else {
+        setUser(null)
       }
-    } catch {
-      localStorage.removeItem(STORAGE_KEY)
-    } finally {
       setLoading(false)
-    }
-  }, [])
+    })
 
-  const persistUser = useCallback((profile: UserProfile) => {
-    setUser(profile)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(profile))
+    return () => unsubscribe()
   }, [])
 
   const login = useCallback(async (email: string, password: string) => {
     const profile = await authService.loginWithEmail(email, password)
-    persistUser(profile)
-  }, [persistUser])
+    setUser(profile)
+  }, [])
 
   const loginWithGoogle = useCallback(async () => {
     const result = await authService.loginWithGoogle()
     if (result.isNewUser) {
       setPendingGoogleData(result)
-    } else {
-      // Usuario recurrente, ya tiene perfil completo
-      const profile: UserProfile = {
-        uid: result.uid,
-        nombres: result.displayName.split(' ')[0] || '',
-        apellidos: result.displayName.split(' ').slice(1).join(' ') || '',
-        username: '',
-        email: result.email,
-        avatarUrl: result.photoUrl,
-        provider: 'google',
-        createdAt: new Date().toISOString(),
-      }
-      persistUser(profile)
     }
-  }, [persistUser])
+  }, [])
 
   const register = useCallback(async (data: RegisterFormData) => {
     const profile = await authService.registerWithEmail(data)
-    persistUser(profile)
-  }, [persistUser])
+    setUser(profile)
+  }, [])
 
   const completeProfile = useCallback(async (username: string) => {
     if (!pendingGoogleData) {
@@ -90,14 +81,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     const profile = await authService.completeGoogleProfile(pendingGoogleData, username)
     setPendingGoogleData(null)
-    persistUser(profile)
-  }, [pendingGoogleData, persistUser])
+    setUser(profile)
+  }, [pendingGoogleData])
 
   const logout = useCallback(async () => {
     await authService.logout()
     setUser(null)
     setPendingGoogleData(null)
-    localStorage.removeItem(STORAGE_KEY)
   }, [])
 
   const clearPendingGoogle = useCallback(() => {

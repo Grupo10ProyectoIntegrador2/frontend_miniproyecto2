@@ -149,7 +149,7 @@ export default function LoginPage() {
           </FormField>
 
           <FormField
-            label="Contrasena"
+            label="Contraseña"
             id="login-password"
             error={errors.password}
             required
@@ -158,7 +158,7 @@ export default function LoginPage() {
               id="login-password"
               type="password"
               className={getInputClass('password')}
-              placeholder="Tu contrasena"
+              placeholder="Tu contraseña"
               value={form.password}
               onChange={(e) => updateField('password', e.target.value)}
               onBlur={() => handleBlur('password')}
