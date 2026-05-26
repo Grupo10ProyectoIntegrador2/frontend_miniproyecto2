@@ -15,7 +15,7 @@ export function validateEmail(email: string): string | null {
     return 'El correo es obligatorio'
   }
   if (!EMAIL_REGEX.test(email)) {
-    return 'Ingresa un correo valido'
+    return 'Ingresa un correo electrónico válido'
   }
   return null
 }

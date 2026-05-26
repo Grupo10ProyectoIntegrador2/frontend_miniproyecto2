@@ -240,13 +240,7 @@ export default function RegistroPage() {
       {/* Top Header Navigation */}
       <header className="w-full max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          {/* Custom Vibrant Study Salon Logo */}
-          <div className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-500 to-violet-600 text-white shadow-md shadow-violet-200">
-            <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 3L1 9L12 15L21 10.09V17H23V9L12 3Z"/>
-              <path d="M4.5 13.5V17.5L12 21.5L19.5 17.5V13.5L12 17.5L4.5 13.5Z"/>
-            </svg>
-          </div>
+          <img src="/logo.png" alt="Salón de Estudio" className="h-8 w-8 object-contain" />
           <span className="font-semibold text-slate-800 tracking-tight text-base">Salón de Estudio</span>
         </div>
 
