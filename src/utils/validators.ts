@@ -54,7 +54,7 @@ export function validateUsername(username: string): string | null {
 
 export function validateConfirmPassword(password: string, confirm: string): string | null {
   if (!confirm) {
-    return 'Confirma tu contraseña'
+    return 'Debes confirmar tu contraseña'
   }
   if (password !== confirm) {
     return 'Las contraseñas no coinciden'

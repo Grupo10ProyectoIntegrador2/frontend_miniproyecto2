@@ -21,9 +21,9 @@ export default function AvatarSelector({ selected, onSelect, error }: AvatarSele
   return (
     <div className="space-y-2">
       <p className="text-sm font-medium text-[var(--color-text)]">
-        Avatar <span className="ml-0.5 text-[var(--color-error)]">*</span>
+        Elige tu avatar <span className="ml-0.5 text-[var(--color-error)]">*</span>
       </p>
-      <div className="grid grid-cols-4 gap-3">
+      <div className="flex justify-between items-center w-full gap-1">
         {AVATARS.map((avatar) => {
           const isSelected = selected === avatar.id
           return (
@@ -34,11 +34,11 @@ export default function AvatarSelector({ selected, onSelect, error }: AvatarSele
               aria-label={`Avatar ${avatar.label}`}
               aria-pressed={isSelected}
               className={cn(
-                'group relative flex h-14 w-14 items-center justify-center rounded-full transition-all duration-200',
-                'hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]',
+                'group relative flex h-10 w-10 items-center justify-center rounded-full transition-all duration-200 shrink-0',
+                'hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500',
                 isSelected
-                  ? 'ring-2 ring-[var(--color-primary)] ring-offset-2 ring-offset-[var(--color-surface)]'
-                  : 'ring-1 ring-[var(--color-border)]'
+                  ? 'ring-2 ring-violet-500 ring-offset-2 ring-offset-white scale-105'
+                  : 'ring-1 ring-[var(--color-border)] hover:ring-slate-300'
               )}
               style={{ backgroundColor: avatar.color }}
             >
@@ -50,14 +50,14 @@ export default function AvatarSelector({ selected, onSelect, error }: AvatarSele
                 strokeWidth="1.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="h-7 w-7"
+                className="h-5 w-5"
               >
                 <circle cx="12" cy="8" r="4" />
                 <path d="M5.5 21a7.5 7.5 0 0 1 13 0" />
               </svg>
               {isSelected && (
-                <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-primary)] text-white">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="h-3 w-3">
+                <span className="absolute -bottom-0.5 -right-0.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-violet-600 text-white shadow-sm">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" className="h-2.5 w-2.5">
                     <path d="M5 13l4 4L19 7" />
                   </svg>
                 </span>
