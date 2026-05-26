@@ -1,5 +1,8 @@
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
+import { Users, Key, Video, MessageSquare, BookOpen, Plus } from 'lucide-react'
+import DashboardHeader from '../components/DashboardHeader'
+import Button from '../components/ui/Button'
 
 export default function DashboardPage() {
   const { user, logout } = useAuth()
@@ -13,76 +16,90 @@ export default function DashboardPage() {
   if (!user) return null
 
   return (
-    <main
-      id="main-content"
-      className="flex min-h-screen flex-col items-center justify-center bg-[var(--color-bg)] px-4"
-    >
-      <div className="w-full max-w-lg rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center">
-        <div
-          className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full"
-          style={{
-            backgroundColor: getAvatarColor(user.avatarUrl),
-          }}
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="white"
-            strokeWidth="1.5"
-            className="h-10 w-10"
-          >
-            <circle cx="12" cy="8" r="4" />
-            <path d="M5.5 21a7.5 7.5 0 0 1 13 0" />
-          </svg>
+    <div className="flex min-h-screen flex-col bg-slate-50/30">
+      <DashboardHeader onLogout={handleLogout} />
+      
+      <main id="main-content" className="flex-1 mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        
+        {/* Top Section */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-16 mt-4">
+          <div>
+            <h1 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Bienvenido, {user.nombres}
+            </h1>
+            <p className="mt-2 text-slate-600 text-lg">
+              Gestiona tus salas de estudio colaborativas
+            </p>
+          </div>
+          <div className="flex gap-3 mt-4 sm:mt-0">
+            <Button className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white border-0 shadow-sm rounded-lg" onClick={() => navigate('/salas/crear')}>
+              <Plus className="mr-2 h-4 w-4" /> Crear Sala
+            </Button>
+            <Button variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg shadow-sm" onClick={() => navigate('/unirse')}>
+              Unirme a una Sala
+            </Button>
+          </div>
         </div>
 
-        <h1 className="text-2xl font-bold text-[var(--color-text)]">
-          Bienvenido, {user.nombres}
-        </h1>
-        <p className="mt-1 text-[var(--color-text-muted)]">@{user.username}</p>
-        <p className="mt-1 text-sm text-[var(--color-text-muted)]">{user.email}</p>
-
-        <div className="mt-6 rounded-lg bg-[var(--color-surface-2)] p-4">
-          <h2 className="text-sm font-semibold text-[var(--color-text)] mb-3">
-            Datos del perfil
-          </h2>
-          <dl className="space-y-2 text-sm text-left">
-            <div className="flex justify-between">
-              <dt className="text-[var(--color-text-muted)]">Nombre completo</dt>
-              <dd className="text-[var(--color-text)]">{user.nombres} {user.apellidos}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-[var(--color-text-muted)]">Username</dt>
-              <dd className="text-[var(--color-text)]">@{user.username}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-[var(--color-text-muted)]">Proveedor</dt>
-              <dd className="text-[var(--color-text)] capitalize">{user.provider}</dd>
-            </div>
-          </dl>
+        {/* Empty State Section */}
+        <div className="flex flex-col items-center justify-center py-16 text-center max-w-2xl mx-auto">
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg shadow-purple-200 mb-8">
+            <Users className="h-10 w-10 text-white" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-3">No tienes salas todavía</h2>
+          <p className="text-slate-600 mb-8 max-w-md">
+            Crea tu primera sala de estudio o únete a una existente usando un código de acceso
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+            <Button className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white border-0 px-8 py-6 rounded-xl shadow-md" onClick={() => navigate('/salas/crear')}>
+              <Plus className="mr-2 h-5 w-5" /> Crear mi primera sala
+            </Button>
+            <Button variant="outline" className="w-full sm:w-auto border-slate-200 text-slate-700 hover:bg-slate-50 px-8 py-6 rounded-xl shadow-sm" onClick={() => navigate('/unirse')}>
+              <Key className="mr-2 h-5 w-5" /> Tengo un código
+            </Button>
+          </div>
         </div>
 
-        <button
-          onClick={handleLogout}
-          className="mt-6 w-full rounded-lg border border-[var(--color-border)] bg-transparent px-4 py-2.5 text-sm font-medium text-[var(--color-text)] transition-colors hover:bg-[var(--color-surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
-        >
-          Cerrar sesion
-        </button>
-      </div>
-    </main>
+        {/* Bottom Section */}
+        <div className="mt-24 pt-10 border-t border-slate-100">
+          <p className="text-center text-xs font-bold tracking-wider text-slate-400 uppercase mb-8">
+            ¿Qué puedes hacer en Salón de Estudio?
+          </p>
+          
+          <div className="grid gap-6 sm:grid-cols-3">
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500 mb-4">
+                <Video className="h-6 w-6 text-white" />
+              </div>
+              <h3 className="text-sm font-bold text-slate-900 mb-2">Videoconferencia</h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Conecta en tiempo real con tus compañeros usando video y audio
+              </p>
+            </div>
+            
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-500 mb-4">
+                <MessageSquare className="h-6 w-6 text-white" />
+              </div>
+              <h3 className="text-sm font-bold text-slate-900 mb-2">Chat Colaborativo</h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Comparte ideas, recursos y dudas con todos los participantes
+              </p>
+            </div>
+            
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-pink-500 mb-4">
+                <BookOpen className="h-6 w-6 text-white" />
+              </div>
+              <h3 className="text-sm font-bold text-slate-900 mb-2">Salas Privadas</h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Crea salas con código de acceso para estudiar con tu grupo
+              </p>
+            </div>
+          </div>
+        </div>
+
+      </main>
+    </div>
   )
-}
-
-function getAvatarColor(avatarUrl: string): string {
-  const colorMap: Record<string, string> = {
-    'avatar-1': '#6c63ff',
-    'avatar-2': '#10b981',
-    'avatar-3': '#f59e0b',
-    'avatar-4': '#ef4444',
-    'avatar-5': '#3b82f6',
-    'avatar-6': '#ec4899',
-    'avatar-7': '#8b5cf6',
-    'avatar-8': '#14b8a6',
-  }
-  return colorMap[avatarUrl] || '#6c63ff'
 }
