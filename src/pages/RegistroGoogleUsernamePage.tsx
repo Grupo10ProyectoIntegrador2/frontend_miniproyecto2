@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../contexts/useAuth'
 import { checkUsernameAvailable } from '../services/auth.service'
 import { validateUsername } from '../utils/validators'
 import FormField from '../components/auth/FormField'

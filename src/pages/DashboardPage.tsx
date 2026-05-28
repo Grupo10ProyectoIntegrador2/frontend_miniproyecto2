@@ -1,4 +1,4 @@
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../contexts/useAuth'
 import { useNavigate } from 'react-router-dom'
 import { Users, Key, Video, MessageSquare, BookOpen, Plus } from 'lucide-react'
 import DashboardHeader from '../components/DashboardHeader'
@@ -25,7 +25,7 @@ export default function DashboardPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-16 mt-4">
           <div>
             <h1 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Bienvenido, {user.nombres}
+              Bienvenido, {user.firstName}
             </h1>
             <p className="mt-2 text-slate-600 text-lg">
               Gestiona tus salas de estudio colaborativas

@@ -1,7 +1,7 @@
 export interface UserProfile {
   uid: string
-  nombres: string
-  apellidos: string
+  firstName: string       // era: nombres
+  lastName: string        // era: apellidos
   username: string
   email: string
   avatarUrl: string

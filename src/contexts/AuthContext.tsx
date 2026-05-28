@@ -16,7 +16,8 @@ import type {
 } from '../types/auth.types'
 import * as authService from '../services/auth.service'
 
-interface AuthContextValue {
+
+export interface AuthContextValue {
   user: UserProfile | null
   loading: boolean
   pendingGoogleData: GoogleAuthResult | null
@@ -28,7 +29,7 @@ interface AuthContextValue {
   clearPendingGoogle: () => void
 }
 
-const AuthContext = createContext<AuthContextValue | null>(null)
+export const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null)
@@ -39,23 +40,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
-          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid))
-          if (userDoc.exists()) {
-            setUser(userDoc.data() as UserProfile)
+          const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+          
+          const response = await fetch(`${API_BASE_URL}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ uid: firebaseUser.uid }),
+          });
+          
+          if (response.ok) {
+            const data = await response.json() as { success: boolean; user: UserProfile };
+            if (data.user) {
+              setUser(data.user);
+            } else {
+              setUser(null);
+            }
           } else {
-            setUser(null)
+            setUser(null);
           }
         } catch (error) {
-          console.error("Error obteniendo perfil:", error)
-          setUser(null)
+          console.error("Error obteniendo perfil:", error);
+          setUser(null);
         }
       } else {
-        setUser(null)
+        setUser(null);
       }
-      setLoading(false)
-    })
+      setLoading(false);
+    });
 
-    return () => unsubscribe()
+    return () => unsubscribe();
   }, [])
 
   const login = useCallback(async (email: string, password: string) => {
@@ -111,12 +124,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
     </AuthContext.Provider>
   )
-}
-
-export function useAuth(): AuthContextValue {
-  const context = useContext(AuthContext)
-  if (!context) {
-    throw new Error('useAuth debe usarse dentro de AuthProvider')
-  }
-  return context
 }

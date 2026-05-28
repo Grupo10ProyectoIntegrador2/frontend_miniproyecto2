@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../contexts/useAuth'
 import { validateLoginForm } from '../utils/validators'
 import type { LoginFormData, FieldErrors } from '../types/auth.types'
 import FormField from '../components/auth/FormField'

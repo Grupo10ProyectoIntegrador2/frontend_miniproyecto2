@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { LogOut } from 'lucide-react'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '@/contexts/useAuth'
 
 interface DashboardHeaderProps {
   onLogout: () => void;
@@ -42,10 +42,10 @@ export default function DashboardHeader({ onLogout }: DashboardHeaderProps) {
               className="flex h-10 w-10 items-center justify-center rounded-full text-white font-bold text-lg"
               style={{ backgroundColor: getAvatarColor(user.avatarUrl) }}
             >
-              {user.nombres.charAt(0).toUpperCase()}
+              {user.firstName.charAt(0).toUpperCase()}
             </div>
             <div className="hidden sm:flex flex-col text-sm">
-              <span className="font-bold text-slate-900">{user.nombres}</span>
+              <span className="font-bold text-slate-900">{user.firstName}</span>
               <span className="text-slate-500 text-xs">@{user.username}</span>
             </div>
           </div>
