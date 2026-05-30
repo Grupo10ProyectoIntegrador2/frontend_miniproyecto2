@@ -2,15 +2,15 @@ import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/useAuth'
 import type { ReactNode } from 'react'
 
-interface ProtectedRouteProps {
+interface PublicOnlyRouteProps {
   children: ReactNode
 }
 
 /**
- * Protege rutas privadas. Redirige a /login si el usuario
- * no esta autenticado. Muestra un loader mientras se verifica.
+ * Protege rutas de auth (login, registro) para que usuarios
+ * ya autenticados sean redirigidos al dashboard.
  */
-export default function ProtectedRoute({ children }: ProtectedRouteProps) {
+export default function PublicOnlyRoute({ children }: PublicOnlyRouteProps) {
   const { user, loading } = useAuth()
 
   if (loading) {
@@ -21,8 +21,8 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     )
   }
 
-  if (!user) {
-    return <Navigate to="/login" replace />
+  if (user) {
+    return <Navigate to="/dashboard" replace />
   }
 
   return <>{children}</>
