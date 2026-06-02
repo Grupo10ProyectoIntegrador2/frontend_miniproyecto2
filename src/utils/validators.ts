@@ -117,3 +117,14 @@ export function validateLoginForm(data: LoginFormData): FieldErrors<LoginFormDat
 
   return errors
 }
+
+export function validateRoomName(name: string): string | null {
+  const trimmed = name.trim()
+  if (!trimmed) {
+    return 'El nombre de la sala es obligatorio.'
+  }
+  if (trimmed.length < 3 || trimmed.length > 50) {
+    return 'El nombre debe tener entre 3 y 50 caracteres.'
+  }
+  return null
+}
