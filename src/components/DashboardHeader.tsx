@@ -54,11 +54,11 @@ export default function DashboardHeader({ onLogout }: DashboardHeaderProps) {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-slate-100 bg-white">
+    <header className="sticky top-0 z-50 w-full border-b border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-900">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link to="/dashboard" className="flex items-center gap-2">
           <img src="/logo.png" alt="Salón de Estudio" className="h-7 w-7 object-contain" />
-          <span className="text-lg font-bold text-slate-900">
+          <span className="text-lg font-bold text-slate-900 dark:text-white">
             Salón de Estudio
           </span>
         </Link>
@@ -67,7 +67,7 @@ export default function DashboardHeader({ onLogout }: DashboardHeaderProps) {
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="flex items-center gap-3 p-1.5 pr-3 rounded-full hover:bg-slate-50 transition-all border border-slate-100/80 shadow-xs cursor-pointer focus:outline-none"
+            className="flex items-center gap-3 p-1.5 pr-3 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800 transition-all border border-slate-100/80 dark:border-slate-700 shadow-xs cursor-pointer focus:outline-none"
             aria-expanded={isOpen}
             aria-haspopup="true"
           >
@@ -89,8 +89,8 @@ export default function DashboardHeader({ onLogout }: DashboardHeaderProps) {
 
             {/* Username / Email info */}
             <div className="hidden sm:flex flex-col text-left text-xs leading-tight">
-              <span className="font-bold text-slate-900">@{user.username}</span>
-              <span className="text-slate-400 font-medium">{user.email}</span>
+              <span className="font-bold text-slate-900 dark:text-white">@{user.username}</span>
+              <span className="text-slate-400 dark:text-slate-500 font-medium">{user.email}</span>
             </div>
 
             {/* Chevron toggle */}
@@ -99,15 +99,15 @@ export default function DashboardHeader({ onLogout }: DashboardHeaderProps) {
 
           {/* Dropdown Menu */}
           {isOpen && (
-            <div className="absolute right-0 mt-2 w-56 rounded-xl border border-slate-100 bg-white p-1.5 shadow-lg ring-1 ring-black/5 animate-fade-in z-50">
+            <div className="absolute right-0 mt-2 w-56 rounded-xl border border-slate-100 bg-white dark:border-slate-700 dark:bg-slate-900 p-1.5 shadow-lg ring-1 ring-black/5 animate-fade-in z-50">
               <button
                 onClick={() => {
                   setIsOpen(false)
                   navigate('/perfil?tab=perfil')
                 }}
-                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer"
+                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
               >
-                <User className="h-4.5 w-4.5 text-slate-400" />
+                <User className="h-4.5 w-4.5 text-slate-400 dark:text-slate-500" />
                 Editar Perfil
               </button>
               <button
@@ -115,12 +115,12 @@ export default function DashboardHeader({ onLogout }: DashboardHeaderProps) {
                   setIsOpen(false)
                   navigate('/perfil?tab=visualizacion')
                 }}
-                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer"
+                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
               >
-                <Moon className="h-4.5 w-4.5 text-slate-400" />
+                <Moon className="h-4.5 w-4.5 text-slate-400 dark:text-slate-500" />
                 Visualización y accesibilidad
               </button>
-              <div className="my-1 border-t border-slate-100" />
+              <div className="my-1 border-t border-slate-100 dark:border-slate-700" />
               <button
                 onClick={handleLogout}
                 className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-red-600 hover:bg-red-50/50 transition-colors cursor-pointer"

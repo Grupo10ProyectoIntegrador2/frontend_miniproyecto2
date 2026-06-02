@@ -15,6 +15,13 @@ import * as authService from '../services/auth.service'
 import AvatarSelector from '../components/auth/AvatarSelector'
 import DashboardHeader from '../components/DashboardHeader'
 import { validateUsername, validateEmail, validateRequired } from '../utils/validators'
+import {
+  getThemePreference,
+  getAccessibilityPreferences,
+  setThemePreference,
+  toggleAccessibility,
+  type ThemePreference,
+} from '../lib/appearance'
 
 type ActiveSection = 'perfil' | 'visualizacion' | 'accesibilidad'
 
@@ -67,18 +74,13 @@ export default function PerfilPage() {
     }
   }, [user])
 
-  // Load and apply theme and accessibility settings on mount
+  // Sincronizar estado local con preferencias ya aplicadas al iniciar la app
   useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') || 'sistema'
-    setTheme(savedTheme)
-    
-    const readable = localStorage.getItem('access-readable') === 'true'
-    const contrast = localStorage.getItem('access-contrast') === 'true'
-    const motion = localStorage.getItem('access-motion') === 'true'
-    
-    setReadableText(readable)
-    setHighContrast(contrast)
-    setReduceMotion(motion)
+    setTheme(getThemePreference())
+    const prefs = getAccessibilityPreferences()
+    setReadableText(prefs.readableText)
+    setHighContrast(prefs.highContrast)
+    setReduceMotion(prefs.reduceMotion)
   }, [])
 
   if (!user) return null
@@ -110,51 +112,21 @@ export default function PerfilPage() {
     setErrorMessage('')
   }
 
-  // Theme changer logic
-  const handleThemeChange = (newTheme: string) => {
+  const handleThemeChange = (newTheme: ThemePreference) => {
     setTheme(newTheme)
-    localStorage.setItem('theme', newTheme)
-    const root = document.documentElement
-    
-    if (newTheme === 'oscuro') {
-      root.classList.add('dark')
-    } else if (newTheme === 'claro') {
-      root.classList.remove('dark')
-    } else {
-      // System choice
-      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-      if (isDark) {
-        root.classList.add('dark')
-      } else {
-        root.classList.remove('dark')
-      }
-    }
+    setThemePreference(newTheme)
     setSuccessMessage('Tema actualizado correctamente.')
   }
 
-  // Accessibility toggle logic
   const handleAccessibilityToggle = (option: 'readable' | 'contrast' | 'motion') => {
-    const root = document.documentElement
-    
-    if (option === 'readable') {
-      const nextVal = !readableText
-      setReadableText(nextVal)
-      localStorage.setItem('access-readable', String(nextVal))
-      if (nextVal) root.classList.add('readable-text')
-      else root.classList.remove('readable-text')
-    } else if (option === 'contrast') {
-      const nextVal = !highContrast
-      setHighContrast(nextVal)
-      localStorage.setItem('access-contrast', String(nextVal))
-      if (nextVal) root.classList.add('high-contrast')
-      else root.classList.remove('high-contrast')
-    } else if (option === 'motion') {
-      const nextVal = !reduceMotion
-      setReduceMotion(nextVal)
-      localStorage.setItem('access-motion', String(nextVal))
-      if (nextVal) root.classList.add('reduce-motion')
-      else root.classList.remove('reduce-motion')
-    }
+    const next = toggleAccessibility(option, {
+      readableText,
+      highContrast,
+      reduceMotion,
+    })
+    setReadableText(next.readableText)
+    setHighContrast(next.highContrast)
+    setReduceMotion(next.reduceMotion)
     setSuccessMessage('Ajustes de accesibilidad actualizados.')
   }
 
