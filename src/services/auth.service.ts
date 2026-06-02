@@ -3,18 +3,10 @@ import {
   signInWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
-  signOut
+  signOut,
+  deleteUser
 } from 'firebase/auth';
-import {
-  doc,
-  setDoc,
-  getDoc,
-  collection,
-  query,
-  where,
-  getDocs
-} from 'firebase/firestore';
-import { auth, db } from '../lib/firebase';
+import { auth } from '../lib/firebase';
 import type { UserProfile, RegisterFormData, GoogleAuthResult } from '../types/auth.types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
@@ -54,22 +46,44 @@ export async function checkUsernameAvailable(username: string): Promise<boolean>
 }
 
 export async function registerWithEmail(data: RegisterFormData): Promise<UserProfile> {
-  //crear usuario en Firebase Auth
+  // ── Validación previa del dominio institucional ──────────────────────────
+  // Esto evita que Firebase Auth cree el usuario antes de que el backend lo rechace.
+  const domain = data.email.split('@')[1] ?? ''
+  const eduRegex = /\.edu(\.[a-z]{2,})?$/i
+  if (!eduRegex.test(domain)) {
+    throw new Error(
+      'Solo se aceptan correos institucionales con dominio .edu (por ejemplo: usc.edu.co, correounivalle.edu.co, uao.edu.es).'
+    )
+  }
+
+  // ── Crear usuario en Firebase Auth ───────────────────────────────────────
   const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-  
-  // lamar al backend para guardar perfil
-  await callBackendAPI(
-    '/auth/register',
-    {
-      uid: userCredential.user.uid,
-      firstName: data.nombres,
-      lastName: data.apellidos,
-      username: data.username,
-      email: data.email,
-      avatarUrl: data.avatarUrl || '',
-      provider: 'email',
+
+  // ── Llamar al backend para guardar el perfil en Firestore ────────────────
+  // Si el backend rechaza (email/username duplicado, validación, etc.) debemos
+  // borrar el usuario recién creado en Firebase Auth para no dejarlo huérfano.
+  try {
+    await callBackendAPI(
+      '/auth/register',
+      {
+        uid: userCredential.user.uid,
+        firstName: data.nombres,
+        lastName: data.apellidos,
+        username: data.username.toLowerCase(),
+        email: data.email.toLowerCase(),
+        avatarUrl: data.avatarUrl || '',
+        provider: 'email',
+      }
+    );
+  } catch (backendError) {
+    // Eliminar el usuario de Firebase Auth para mantener consistencia
+    try {
+      await deleteUser(userCredential.user);
+    } catch (deleteErr) {
+      console.error('No se pudo eliminar el usuario de Firebase Auth tras error de backend:', deleteErr);
     }
-  );
+    throw backendError;
+  }
 
   //retornar el perfil al frontend
   const profile: UserProfile = {
@@ -89,7 +103,7 @@ export async function registerWithEmail(data: RegisterFormData): Promise<UserPro
 export async function loginWithEmail(email: string, password: string): Promise<UserProfile> {
   // autenticar en Firebase Auth
   const userCredential = await signInWithEmailAndPassword(auth, email, password);
-  
+
   // llamar al backend para obtener el perfil
   const response = await callBackendAPI<{ success: boolean; user: UserProfile }>(
     '/auth/login',
@@ -107,18 +121,30 @@ export async function loginWithGoogle(): Promise<GoogleAuthResult> {
   const provider = new GoogleAuthProvider();
   const userCredential = await signInWithPopup(auth, provider);
   const { user } = userCredential;
-  
+
+  // Validación del dominio para Google
+  const email = user.email || '';
+  const domain = email.split('@')[1] ?? '';
+  const eduRegex = /\.edu(\.[a-z]{2,})?$/i;
+
+  if (!eduRegex.test(domain)) {
+    // Si no es institucional, eliminamos el usuario de Firebase Auth inmediatamente
+    await deleteUser(user);
+    throw new Error(
+      'Solo se aceptan correos institucionales con dominio .edu (por ejemplo: usc.edu.co, correounivalle.edu.co, uao.edu.es).'
+    );
+  }
+
   // Llamar al backend para verificar si es nuevo usuario
   try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ uid: user.uid }),
     });
-    
+
     const data = await response.json();
-    
+
     return {
       uid: user.uid,
       email: user.email || '',
@@ -151,8 +177,8 @@ export async function completeGoogleProfile(
       uid: googleData.uid,
       firstName: nameParts[0] || '',
       lastName: nameParts.slice(1).join(' ') || '',
-      username,
-      email: googleData.email,
+      username: username.toLowerCase(),
+      email: googleData.email.toLowerCase(),
       avatarUrl: googleData.photoUrl,
     }
   );
@@ -163,13 +189,71 @@ export async function completeGoogleProfile(
     firstName: nameParts[0] || '',
     lastName: nameParts.slice(1).join(' ') || '',
     username: username.toLowerCase(),
-    email: googleData.email,
+    email: googleData.email.toLowerCase(),
     avatarUrl: googleData.photoUrl,
     provider: 'google',
     createdAt: new Date().toISOString(),
   };
 
   return profile;
+}
+
+export async function checkEmailAvailable(email: string): Promise<boolean> {
+  try {
+    const response = await callBackendAPI<{ available: boolean }>(
+      '/auth/check-email',
+      { email }
+    );
+    return response.available;
+  } catch (error) {
+    console.error('Error checking email:', error);
+    return false;
+  }
+}
+
+export async function updateUserProfile(
+  uid: string,
+  data: {
+    firstName: string;
+    lastName: string;
+    username: string;
+    avatarUrl: string;
+    email?: string;
+  }
+): Promise<{ success: boolean; message: string }> {
+  const idToken = await auth.currentUser?.getIdToken();
+  const response = await fetch(`${API_BASE_URL}/auth/profile/${uid}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(idToken ? { 'Authorization': `Bearer ${idToken}` } : {}),
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Error al actualizar el perfil');
+  }
+
+  return response.json();
+}
+
+export async function deleteUserProfile(uid: string): Promise<{ success: boolean; message: string }> {
+  const idToken = await auth.currentUser?.getIdToken();
+  const response = await fetch(`${API_BASE_URL}/auth/profile/${uid}`, {
+    method: 'DELETE',
+    headers: {
+      ...(idToken ? { 'Authorization': `Bearer ${idToken}` } : {}),
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Error al eliminar la cuenta');
+  }
+
+  return response.json();
 }
 
 export async function logout(): Promise<void> {
