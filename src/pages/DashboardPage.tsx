@@ -16,7 +16,7 @@ import {
 import DashboardHeader from '../components/DashboardHeader'
 import Button from '../components/ui/Button'
 import { getJoinedRooms } from '../services/rooms.service'
-import { formatRoomId, getRoomInitials } from '../lib/room-utils'
+import { getRoomInitials } from '../lib/room-utils'
 import type { Room } from '../types/room.types'
 
 const AVATAR_COLORS = ['#6366f1', '#8b5cf6', '#3b82f6', '#ec4899', '#14b8a6']
@@ -92,19 +92,20 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="flex gap-3 mt-4 sm:mt-0">
-            <Button
-              className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white border-0 shadow-sm rounded-lg"
+            <button
+              type="button"
               onClick={() => navigate('/salas/crear')}
+              className="inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-violet-100 dark:shadow-none bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 active:scale-[0.98] transition-all cursor-pointer"
             >
-              <Plus className="mr-2 h-4 w-4" /> Crear Sala
-            </Button>
-            <Button
-              variant="outline"
-              className="border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 rounded-lg shadow-sm"
+              <Plus className="h-4 w-4" /> Crear Sala
+            </button>
+            <button
+              type="button"
               onClick={() => navigate('/unirse')}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 active:scale-[0.98] cursor-pointer"
             >
               Unirme a una Sala
-            </Button>
+            </button>
           </div>
         </div>
 
@@ -159,8 +160,9 @@ export default function DashboardPage() {
                       <h2 className="truncate text-base font-bold text-slate-900 dark:text-white">
                         {room.name}
                       </h2>
-                      <p className="text-xs font-medium text-slate-400 dark:text-slate-500">
-                        ID {formatRoomId(room.id)}
+                      <p className="text-xs font-medium text-slate-400 dark:text-slate-500 break-all select-all">
+                        <span>ID </span>
+                        <span className="font-mono">{room.id}</span>
                       </p>
                     </div>
                   </div>
@@ -179,21 +181,22 @@ export default function DashboardPage() {
                   </div>
 
                   <div className="mt-5 flex gap-2">
-                    <Button
-                      className="flex-1 rounded-xl bg-blue-600 text-white hover:bg-blue-700"
+                    <button
+                      type="button"
                       onClick={() => navigate(`/salas/${room.id}`, { state: { room } })}
+                      className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 active:scale-[0.98] transition-colors cursor-pointer"
                     >
                       <ArrowUpRight className="h-4 w-4" />
                       Entrar
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="flex-1 rounded-xl border-slate-200 dark:border-slate-700 dark:text-slate-200"
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => handleCopyId(room.id)}
+                      className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 active:scale-[0.98] cursor-pointer"
                     >
                       <Copy className="h-4 w-4" />
                       {copiedId === room.id ? 'Copiado' : 'Copiar ID'}
-                    </Button>
+                    </button>
                   </div>
                 </article>
               ))}
@@ -213,19 +216,23 @@ export default function DashboardPage() {
               Crea tu primera sala de estudio o únete a una existente usando un código de acceso
             </p>
             <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-              <Button
-                className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white border-0 px-8 py-6 rounded-xl shadow-md"
+              <button
+                type="button"
                 onClick={() => navigate('/salas/crear')}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white border-0 px-5 py-2.5 rounded-xl shadow-md font-semibold transition-all active:scale-[0.98] cursor-pointer"
               >
-                <Plus className="mr-2 h-5 w-5" /> Crear mi primera sala
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full sm:w-auto border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 px-8 py-6 rounded-xl shadow-sm"
+                <Plus className="mr-2 h-5 w-5" /> 
+                
+                Crear mi primera sala
+              </button>
+              <button
+                type="button"
                 onClick={() => navigate('/unirse')}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 px-5 py-2.5 rounded-xl shadow-sm font-medium transition-all active:scale-[0.98] cursor-pointer"
               >
-                <Key className="mr-2 h-5 w-5" /> Tengo un código
-              </Button>
+                <Key className="mr-2 h-5 w-5" /> 
+                Tengo un código
+              </button>
             </div>
           </div>
         )}

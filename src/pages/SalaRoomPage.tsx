@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
+  ArrowLeft,
   ArrowUpRight,
   Copy,
   Loader2,
@@ -11,7 +12,6 @@ import DashboardHeader from '../components/DashboardHeader'
 import Button from '../components/ui/Button'
 import { useAuth } from '../contexts/useAuth'
 import { joinRoom } from '../services/rooms.service'
-import { formatRoomId } from '../lib/room-utils'
 import type { Room } from '../types/room.types'
 
 interface LocationState {
@@ -95,9 +95,13 @@ export default function SalaRoomPage() {
               No se pudo abrir la sala
             </h1>
             <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{error || 'Sala no encontrada.'}</p>
-            <Button className="mt-6 rounded-xl" onClick={() => navigate('/dashboard')}>
-              Volver al panel
-            </Button>
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard')}
+              className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 cursor-pointer shadow-sm active:scale-[0.98]" 
+              >
+              Volver al dashboard
+            </button>
           </div>
         </main>
       </div>
@@ -112,6 +116,15 @@ export default function SalaRoomPage() {
       <DashboardHeader />
 
       <main id="main-content" className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
+        <button
+          type="button"
+          onClick={() => navigate('/dashboard')}
+          className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition-colors hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 cursor-pointer"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Volver al dashboard
+        </button>
+
         {justCreated && (
           <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm dark:border-emerald-950/30 dark:bg-slate-900 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -120,18 +133,18 @@ export default function SalaRoomPage() {
                 Ingresaste como {roleLabel} con un ID único y acceso inmediato.
               </p>
             </div>
-            <span className="inline-flex w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-              ID {formatRoomId(room.id)}
+            <span className="inline-flex max-w-full rounded-full bg-slate-100 px-3 py-1 font-mono text-xs font-bold text-slate-600 break-all select-all dark:bg-slate-800 dark:text-slate-300">
+              {room.id}
             </span>
           </div>
         )}
 
         <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div>
+            <div className="min-w-0">
               <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white">{room.name}</h1>
               <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                ID {formatRoomId(room.id)} · {roleLabel} · Sala activa
+                {roleLabel} · Sala activa
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 {isOwner && (
@@ -149,18 +162,22 @@ export default function SalaRoomPage() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                className="rounded-xl border-slate-200 dark:border-slate-700 dark:text-slate-200"
+              <button
+                type="button"
                 onClick={handleCopyId}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 cursor-pointer"
               >
                 <ArrowUpRight className="h-4 w-4" />
                 Invitar
-              </Button>
-              <Button className="rounded-xl bg-blue-600 text-white hover:bg-blue-700" onClick={handleCopyId}>
+              </button>
+              <button 
+                type="button"
+                onClick={handleCopyId}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 active:scale-[0.98] cursor-pointer"
+              >
                 <Copy className="h-4 w-4" />
-                {copied ? 'Copiado' : 'Copiar código'}
-              </Button>
+                {copied ? 'Copiado' : 'Copiar ID'}
+              </button>
             </div>
           </div>
         </section>
@@ -197,27 +214,24 @@ export default function SalaRoomPage() {
           </section>
 
           <aside className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 lg:col-span-2">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Vista de sala</h2>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Código de acceso</h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Una vez creada, esta es la pantalla a la que el anfitrión llega como administrador.
+              Comparte este ID para que otros se unan a la sala.
             </p>
 
             <div className="mt-5 rounded-xl border border-slate-100 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-950/40">
               <p className="text-xs font-bold uppercase tracking-wide text-slate-400">ID de la sala</p>
-              <div className="mt-2 flex items-center justify-between gap-3">
-                <p className="text-xl font-extrabold tracking-wide text-slate-900 dark:text-white">
-                  {formatRoomId(room.id)}
+              <div className="mt-2 flex items-start justify-between gap-3">
+                <p className="font-mono text-base font-semibold break-all select-all text-slate-900 dark:text-white">
+                  {room.id}
                 </p>
                 {copied && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-bold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-bold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
                     <CheckCircle2 className="h-3 w-3" />
                     Copiado
                   </span>
                 )}
               </div>
-              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                Comparte este código para que otros se unan a la sala.
-              </p>
             </div>
 
             <div className="mt-4 rounded-xl border border-slate-100 p-4 dark:border-slate-800">

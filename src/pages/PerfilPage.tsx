@@ -222,7 +222,6 @@ export default function PerfilPage() {
         if (!usernameOk) {
           setFieldErrors(prev => ({ ...prev, username: 'Ese nombre de usuario ya está en uso. Elige otro.' }))
           setSaving(false)
-          setErrorMessage('El nombre de usuario seleccionado ya no está disponible.')
           return
         }
       }
@@ -468,18 +467,23 @@ export default function PerfilPage() {
                       {/* Username */}
                       <div className="flex flex-col gap-1.5">
                         <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wide flex items-center justify-between">
-                          <span>Usuario</span>
+                          <span>Username</span>
                           {checkingUsername && <Loader2 className="h-3 w-3 animate-spin text-slate-400" />}
                         </label>
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-600 font-semibold text-sm">@</span>
                           <input
                             type="text"
                             value={username}
-                            onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
+                            onChange={(e) => {
+                              setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''));
+                              if (fieldErrors.username) {
+                                setFieldErrors(prev => ({ ...prev, username: '' }));
+                              }
+                              setErrorMessage(null);
+                            }}
                             onBlur={handleUsernameBlur}
-                            className={`auth-input pl-7 dark:bg-slate-950 dark:border-slate-800 dark:text-white ${fieldErrors.username ? 'border-red-500 focus:ring-red-500' : ''}`}
-                            placeholder="username"
+                            className={`auth-input px-9 dark:bg-slate-950 dark:border-slate-800 dark:text-white ${fieldErrors.username ? 'border-red-500 focus:ring-red-500' : ''}`}
+                            placeholder="@username"
                             required
                           />
                         </div>
@@ -523,7 +527,7 @@ export default function PerfilPage() {
                     <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-slate-100 dark:border-slate-800/80">
                       <button
                         type="submit"
-                        disabled={saving || checkingUsername || checkingEmail}
+                        disabled={saving || checkingUsername || checkingEmail || !!fieldErrors.username || !!fieldErrors.emaily}
                         className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 dark:bg-indigo-600 hover:bg-blue-700 dark:hover:bg-indigo-700 text-white font-bold text-sm px-6 py-3 shadow-sm hover:shadow-md transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {saving ? (

@@ -14,6 +14,7 @@ export default function SalasCrearPage() {
 
   const validationError = name.trim() ? validateRoomName(name) : null
   const isValid = name.trim().length > 0 && !validationError
+  const displayError = error || validationError
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -38,87 +39,108 @@ export default function SalasCrearPage() {
     }
   }
 
+  const inputClass = [
+    'auth-input w-full h-11 rounded-sm border text-sm text-center transition-all focus:outline-none focus:ring-2 dark:bg-slate-950 dark:text-white',
+    displayError
+      ? 'border-red-400 bg-red-50/50 focus:border-red-400 focus:ring-red-100 dark:border-red-500/60 dark:bg-red-950/20 dark:focus:ring-red-900/30'
+      : isValid
+        ? 'border-emerald-500 bg-[#E6F4EA] focus:border-emerald-500 focus:ring-emerald-100 dark:border-emerald-600 dark:bg-emerald-950/25 dark:focus:ring-emerald-900/30'
+        : 'border-slate-200 bg-slate-50 focus:border-violet-500 focus:ring-violet-100 dark:border-slate-700 dark:focus:border-violet-500 dark:focus:ring-violet-900/30',
+  ].join(' ')
+
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-br from-slate-50 via-white to-purple-50/40 dark:from-slate-950 dark:via-slate-950 dark:to-indigo-950/20">
+    <div className="flex min-h-screen flex-col bg-slate-50/50 dark:bg-slate-950 transition-colors duration-200">
       <DashboardHeader />
 
-      <main id="main-content" className="flex flex-1 items-center justify-center px-4 py-10">
-        <div className="w-full max-w-2xl rounded-3xl border border-slate-100 bg-white p-8 shadow-xl shadow-slate-200/50 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none sm:p-10">
-          <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white">Crear Sala</h1>
-          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-            Completa el nombre y el sistema generará un ID único antes de enviarte al interior.
-          </p>
+      <main
+        id="main-content"
+        className="flex flex-1 flex-col items-center px-4 py-8 sm:px-6"
+      >
 
-          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-            <div className="space-y-2">
-              <label htmlFor="room-name" className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                Nombre de la sala
-              </label>
-              <input
-                id="room-name"
-                type="text"
-                value={name}
-                onChange={(e) => {
-                  setName(e.target.value)
-                  if (error) setError('')
-                }}
-                maxLength={50}
-                autoFocus
-                placeholder="Ej: Sala de repaso nocturno"
-                className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition-colors dark:bg-slate-950 dark:text-white ${
-                  validationError || error
-                    ? 'border-red-400 bg-red-50/40 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 dark:border-red-500/60 dark:bg-red-950/20'
-                    : isValid
-                      ? 'border-emerald-400 bg-emerald-50/40 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-emerald-500/60 dark:bg-emerald-950/20'
-                      : 'border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700'
-                }`}
-              />
+        <div className="w-full max-w-lg animate-slide-up">
+          <div className="mb-8 text-center">
+            <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent">
+              Crear Sala
+            </h1>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+              Completa el nombre y el sistema generará un ID único antes de enviarte al interior
+            </p>
+          </div>
 
-              {(validationError || error) && (
-                <p className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm font-medium text-red-600 dark:border-red-950/40 dark:bg-red-950/20 dark:text-red-400">
-                  {error || validationError}
-                </p>
-              )}
+          <div className="rounded-xl border border-slate-100 bg-white p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)] dark:border-slate-800 dark:bg-slate-900">
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="space-y-3">
+                <label
+                  htmlFor="room-name"
+                  className="block text-sm font-semibold text-slate-800 dark:text-slate-200"
+                >
+                  Nombre de la sala
+                </label>
 
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Usa un nombre claro para que el resto del grupo identifique la sala.
-              </p>
-            </div>
+                <input
+                  id="room-name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => {
+                    setName(e.target.value)
+                    if (error) setError('')
+                  }}
+                  maxLength={50}
+                  autoFocus
+                  placeholder="Ej: Sala de repaso nocturno"
+                  className={inputClass}
+                />
 
-            <div className="rounded-2xl border border-indigo-100 bg-indigo-50/60 px-4 py-4 text-sm leading-relaxed text-slate-700 dark:border-indigo-950/40 dark:bg-indigo-950/20 dark:text-slate-300">
-              <strong>Al confirmar, se creará un ID único y entrarás como Administrador.</strong>{' '}
-              La redirección ocurre de forma instantánea al interior de la nueva sala.
-            </div>
-
-            <div className="flex flex-wrap gap-3 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="rounded-xl border-slate-200 px-5 dark:border-slate-700 dark:text-slate-200"
-                onClick={() => navigate('/dashboard')}
-                disabled={submitting}
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                disabled={!isValid || submitting}
-                className={`rounded-xl px-6 ${
-                  isValid
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'bg-slate-200 text-slate-400 dark:bg-slate-800 dark:text-slate-500'
-                }`}
-              >
-                {submitting ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Plus className="h-4 w-4" />
+                {displayError && (
+                  <p
+                    className="mt-6 rounded-sm border border-red-300 bg-red-50 px-3 py-2 text-center text-xs font-medium text-red-600 dark:border-red-950/50 dark:bg-red-950/20 dark:text-red-400"
+                    role="alert"
+                  >
+                    {displayError}
+                  </p>
                 )}
-                Crear Sala
-              </Button>
-            </div>
-          </form>
+
+                <p className={`text-left text-xs text-slate-500 dark:text-slate-400 ${displayError ? 'mt-3' : 'mt-1'}`}>
+                  Usa un nombre claro para que el resto del grupo identifique la sala.
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-violet-100 bg-violet-50/40 px-4 py-3.5 text-left text-[13px] leading-relaxed text-slate-600 dark:border-violet-900/30 dark:bg-violet-950/15 dark:text-slate-400">
+                <strong className="font-semibold text-slate-700 dark:text-slate-300">
+                  Al confirmar, se creará un ID único y entrarás como Administrador.
+                </strong>{' '}
+                La redirección ocurre de forma instantánea al interior de la nueva sala.
+              </div>
+
+              <div className="flex flex-wrap justify-center gap-9 pt-3">
+                <button
+                  type="button"
+                  onClick={() => navigate('/dashboard')}
+                  disabled={submitting}
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-5 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 cursor-pointer disabled:opacity-50"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={!isValid || submitting}
+                  className={`inline-flex items-center gap-2 rounded-lg px-6 py-2 text-sm font-semibold shadow-md transition-all active:scale-[0.98] cursor-pointer ${
+                    isValid
+                      ? 'bg-gradient-to-r from-blue-600 to-violet-600 text-white hover:from-blue-700 hover:to-violet-700 border-0 shadow-violet-100 dark:shadow-none'
+                      : 'bg-slate-200 text-slate-400 dark:bg-slate-800 dark:text-slate-500 shadow-none cursor-not-allowed'
+                  }`}
+                >
+                  {submitting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="h-4 w-4" />
+                  )}
+                  Crear Sala
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       </main>
     </div>
