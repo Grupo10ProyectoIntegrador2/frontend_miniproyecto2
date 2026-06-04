@@ -15,7 +15,7 @@ import FormField from '../components/auth/FormField'
 import AvatarSelector from '../components/auth/AvatarSelector'
 import AuthDivider from '../components/auth/AuthDivider'
 import GoogleButton from '../components/auth/GoogleButton'
-import { User, Mail, Lock, AlertCircle, ArrowLeft } from 'lucide-react'
+import { User, Mail, Lock, AlertCircle, ArrowLeft, Eye, EyeOff } from 'lucide-react'
 
 const INITIAL_FORM: RegisterFormData = {
   nombres: '',
@@ -49,6 +49,8 @@ export default function RegistroPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const usernameTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -416,8 +418,8 @@ export default function RegistroPage() {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                 <input
                   id="registro-password"
-                  type="password"
-                  className={getInputClass('password')}
+                  type={showPassword ? 'text' : 'password'}
+                  className={`${getInputClass('password')} pr-10`}
                   placeholder="Tu contraseña"
                   value={form.password}
                   onChange={(e) => updateField('password', e.target.value)}
@@ -425,6 +427,14 @@ export default function RegistroPage() {
                   disabled={isSubmitting}
                   aria-describedby={getInlineError('password') ? 'registro-password-error' : 'registro-password-hint'}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
             </FormField>
 
@@ -439,8 +449,8 @@ export default function RegistroPage() {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                 <input
                   id="registro-confirm-password"
-                  type="password"
-                  className={getInputClass('confirmPassword')}
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  className={`${getInputClass('confirmPassword')} pr-10`}
                   placeholder="Repite tu contraseña"
                   value={form.confirmPassword}
                   onChange={(e) => updateField('confirmPassword', e.target.value)}
@@ -448,6 +458,14 @@ export default function RegistroPage() {
                   disabled={isSubmitting}
                   aria-describedby={getInlineError('confirmPassword') ? 'registro-confirm-password-error' : 'registro-confirm-password-hint'}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  aria-label={showConfirmPassword ? 'Ocultar confirmación de contraseña' : 'Mostrar confirmación de contraseña'}
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
             </FormField>
 
