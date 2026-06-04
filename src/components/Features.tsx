@@ -30,17 +30,17 @@ const features = [
 
 function Features() {
   return (
-    <section className="bg-slate-50/50 px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+    <section className="bg-muted/50 px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
       <div className="mx-auto max-w-4xl">
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-2">
           {features.map((feature) => (
-            <Card key={feature.title} className="border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md rounded-2xl overflow-hidden">
+            <Card key={feature.title} className="border border-border bg-card shadow-sm transition-shadow hover:shadow-md rounded-2xl overflow-hidden">
               <div className="p-8">
                 <div className={`flex h-12 w-12 items-center justify-center rounded-xl shadow-sm ${feature.colorClass}`}>
                   {feature.icon}
                 </div>
-                <h3 className="mt-5 text-lg font-bold text-slate-900">{feature.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                <h3 className="mt-5 text-lg font-bold text-foreground">{feature.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                   {feature.description}
                 </p>
               </div>

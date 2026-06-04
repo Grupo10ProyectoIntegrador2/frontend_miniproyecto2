@@ -196,13 +196,11 @@ export default function PerfilPage() {
     const fNameError = validateRequired(firstName, 'El nombre')
     const lNameError = validateRequired(lastName, 'El apellido')
     const userErrorMsg = validateUsername(username)
-    const emailErrorMsg = user.provider !== 'google' ? validateEmail(email) : null
 
     const errors: Record<string, string> = {}
     if (fNameError) errors.firstName = fNameError
     if (lNameError) errors.lastName = lNameError
     if (userErrorMsg) errors.username = userErrorMsg
-    if (emailErrorMsg) errors.email = emailErrorMsg
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors)
@@ -214,7 +212,6 @@ export default function PerfilPage() {
 
     try {
       const trimmedUser = username.trim().toLowerCase()
-      const trimmedEmail = email.trim().toLowerCase()
 
       // Double-check username collision if changed
       if (trimmedUser !== user.username.toLowerCase()) {
@@ -226,24 +223,12 @@ export default function PerfilPage() {
         }
       }
 
-      // Double-check email collision if changed (and email login)
-      if (user.provider !== 'google' && trimmedEmail !== user.email.toLowerCase()) {
-        const emailOk = await authService.checkEmailAvailable(trimmedEmail)
-        if (!emailOk) {
-          setFieldErrors(prev => ({ ...prev, email: 'Ese correo ya está registrado. Por favor elige otro.' }))
-          setSaving(false)
-          setErrorMessage('El correo electrónico seleccionado ya está registrado en la base de datos.')
-          return
-        }
-      }
-
       // Proceed to update profile in Firestore (frontend updateProfile hook calls backend endpoint)
       await updateProfile({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         username: trimmedUser,
         avatarUrl,
-        ...(user.provider !== 'google' ? { email: trimmedEmail } : {})
       })
 
       setFieldErrors({})
@@ -479,7 +464,7 @@ export default function PerfilPage() {
                               if (fieldErrors.username) {
                                 setFieldErrors(prev => ({ ...prev, username: '' }));
                               }
-                              setErrorMessage(null);
+                              setErrorMessage('');
                             }}
                             onBlur={handleUsernameBlur}
                             className={`auth-input px-9 dark:bg-slate-950 dark:border-slate-800 dark:text-white ${fieldErrors.username ? 'border-red-500 focus:ring-red-500' : ''}`}
@@ -503,23 +488,16 @@ export default function PerfilPage() {
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           onBlur={handleEmailBlur}
-                          disabled={user.provider === 'google'}
+                          disabled
                           className={`auth-input dark:border-slate-800 dark:text-white ${
-                            user.provider === 'google'
-                              ? 'opacity-60 bg-slate-50 dark:bg-slate-950/30 border-slate-200/60 dark:border-slate-800/60 cursor-not-allowed text-slate-500 dark:text-slate-500'
-                              : 'dark:bg-slate-950'
+                            'opacity-60 bg-slate-50 dark:bg-slate-950/30 border-slate-200/60 dark:border-slate-800/60 cursor-not-allowed text-slate-500 dark:text-slate-500'
                           } ${fieldErrors.email ? 'border-red-500 focus:ring-red-500' : ''}`}
                           placeholder="correo@institucion.edu"
                           required
                         />
-                        {user.provider === 'google' && (
-                          <span className="text-xs text-slate-400 dark:text-slate-500 italic">
-                            Sesión iniciada con Google. El correo no se puede cambiar.
-                          </span>
-                        )}
-                        {fieldErrors.email && (
-                          <span className="text-xs text-red-500 font-medium">{fieldErrors.email}</span>
-                        )}
+                        <span className="text-xs text-slate-400 dark:text-slate-500 italic">
+                          El correo no se puede cambiar.
+                        </span>
                       </div>
                     </div>
 
@@ -527,7 +505,7 @@ export default function PerfilPage() {
                     <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-slate-100 dark:border-slate-800/80">
                       <button
                         type="submit"
-                        disabled={saving || checkingUsername || checkingEmail || !!fieldErrors.username || !!fieldErrors.emaily}
+                        disabled={saving || checkingUsername || checkingEmail || !!fieldErrors.username || !!fieldErrors.email}
                         className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 dark:bg-indigo-600 hover:bg-blue-700 dark:hover:bg-indigo-700 text-white font-bold text-sm px-6 py-3 shadow-sm hover:shadow-md transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {saving ? (
