@@ -11,6 +11,25 @@ import type { UserProfile, RegisterFormData, GoogleAuthResult } from '../types/a
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
+function mapFirebaseAuthError(error: unknown, fallbackMessage: string): Error {
+  const code = typeof error === 'object' && error !== null && 'code' in error
+    ? String((error as { code?: unknown }).code)
+    : ''
+
+  switch (code) {
+    case 'auth/email-already-in-use':
+      return new Error('Ese correo ya está registrado. Por favor usa otro.')
+    case 'auth/popup-closed-by-user':
+      return new Error('Cerraste la ventana de Google antes de completar el proceso.')
+    case 'auth/popup-blocked':
+      return new Error('El navegador bloqueó la ventana de Google. Permite las ventanas emergentes e inténtalo de nuevo.')
+    case 'auth/cancelled-popup-request':
+      return new Error('Se canceló el inicio con Google.')
+    default:
+      return error instanceof Error ? error : new Error(fallbackMessage)
+  }
+}
+
 // Función auxiliar para llamar al backend
 async function callBackendAPI<T>(
   endpoint: string,
@@ -57,7 +76,12 @@ export async function registerWithEmail(data: RegisterFormData): Promise<UserPro
   }
 
   // ── Crear usuario en Firebase Auth ───────────────────────────────────────
-  const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+  let userCredential
+  try {
+    userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password)
+  } catch (error) {
+    throw mapFirebaseAuthError(error, 'No se pudo crear la cuenta')
+  }
 
   // ── Llamar al backend para guardar el perfil en Firestore ────────────────
   // Si el backend rechaza (email/username duplicado, validación, etc.) debemos
@@ -119,7 +143,12 @@ export async function loginWithEmail(email: string, password: string): Promise<U
 
 export async function loginWithGoogle(): Promise<GoogleAuthResult> {
   const provider = new GoogleAuthProvider();
-  const userCredential = await signInWithPopup(auth, provider);
+  let userCredential
+  try {
+    userCredential = await signInWithPopup(auth, provider)
+  } catch (error) {
+    throw mapFirebaseAuthError(error, 'Error con la autenticación de Google')
+  }
   const { user } = userCredential;
 
   // Validación del dominio para Google

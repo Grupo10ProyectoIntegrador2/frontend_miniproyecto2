@@ -2,14 +2,12 @@ import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
-  ArrowUpRight,
   Copy,
   Loader2,
   AlertCircle,
   CheckCircle2,
 } from 'lucide-react'
 import DashboardHeader from '../components/DashboardHeader'
-import Button from '../components/ui/Button'
 import { useAuth } from '../contexts/useAuth'
 import { joinRoom } from '../services/rooms.service'
 import type { Room } from '../types/room.types'
@@ -162,14 +160,6 @@ export default function SalaRoomPage() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={handleCopyId}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 cursor-pointer"
-              >
-                <ArrowUpRight className="h-4 w-4" />
-                Invitar
-              </button>
               <button 
                 type="button"
                 onClick={handleCopyId}
