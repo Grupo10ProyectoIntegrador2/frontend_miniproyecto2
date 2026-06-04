@@ -136,12 +136,12 @@ export default function RegistroGoogleUsernamePage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50/50">
+    <div className="min-h-screen flex flex-col bg-background text-foreground">
       {/* Mini top logo navigation */}
       <header className="w-full max-w-6xl mx-auto px-6 py-4 flex items-center">
         <div className="flex items-center gap-2">
           <img src="/logo.png" alt="Salón de Estudio" className="h-8 w-8 object-contain" />
-          <span className="font-semibold text-slate-800 tracking-tight text-base">Salón de Estudio</span>
+          <span className="font-semibold text-foreground tracking-tight text-base">Salón de Estudio</span>
         </div>
       </header>
 
@@ -149,26 +149,26 @@ export default function RegistroGoogleUsernamePage() {
         id="main-content"
         className="flex-grow flex items-center justify-center px-4 py-8"
       >
-        <div className="w-full max-w-md bg-white rounded-3xl border border-slate-100 p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)] animate-slide-up">
+        <div className="w-full max-w-md bg-card rounded-3xl border border-border p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)] animate-slide-up">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent">
               Completa tu perfil
             </h1>
-            <p className="mt-2 text-sm text-slate-500">
+            <p className="mt-2 text-sm text-muted-foreground">
               Un paso más para empezar
             </p>
           </div>
 
           {/* Confirmación de Datos de Google (Tarjeta Premium) */}
-          <div className="flex items-center gap-3.5 rounded-2xl bg-slate-50 border border-slate-100 p-4 mb-6">
+          <div className="flex items-center gap-3.5 rounded-2xl bg-muted border border-border p-4 mb-6">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-violet-600 text-white shadow-sm shadow-violet-200">
               <User className="h-5.5 w-5.5" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-slate-800 truncate uppercase tracking-tight">
+              <p className="text-sm font-semibold text-foreground truncate uppercase tracking-tight">
                 {pendingGoogleData.displayName}
               </p>
-              <p className="text-xs text-slate-400 truncate">
+              <p className="text-xs text-muted-foreground truncate">
                 {pendingGoogleData.email}
               </p>
             </div>
@@ -199,7 +199,7 @@ export default function RegistroGoogleUsernamePage() {
               required
             >
               <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">@</span>
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">@</span>
                 <input
                   id="google-username"
                   type="text"
@@ -263,7 +263,7 @@ export default function RegistroGoogleUsernamePage() {
           <button
             type="button"
             onClick={handleCancel}
-            className="mt-6 w-full text-center text-xs font-semibold text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+            className="mt-6 w-full text-center text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
           >
             Cancelar y volver al registro
           </button>

@@ -8,9 +8,9 @@ import Footer from '../components/Footer'
 
 export default function LandingPage() {
   return (
-    <div className="flex min-h-screen flex-col font-sans selection:bg-fuchsia-200 selection:text-fuchsia-900">
+    <div className="flex min-h-screen flex-col bg-background text-foreground font-sans selection:bg-fuchsia-200 selection:text-fuchsia-900">
       <Header />
-      <main id="main-content" className="flex-1 bg-white">
+      <main id="main-content" className="flex-1 bg-background">
         <Hero />
         <Features />
         <HowItWorks />
