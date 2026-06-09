@@ -202,6 +202,12 @@ export default function PerfilPage() {
     if (lNameError) errors.lastName = lNameError
     if (userErrorMsg) errors.username = userErrorMsg
 
+    // Validate email for non-Google users
+    if (user.provider !== 'google') {
+      const emailError = validateEmail(email.trim().toLowerCase())
+      if (emailError) errors.email = emailError
+    }
+
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors)
       setErrorMessage('Por favor corrige los errores del formulario.')
@@ -212,6 +218,7 @@ export default function PerfilPage() {
 
     try {
       const trimmedUser = username.trim().toLowerCase()
+      const trimmedEmail = email.trim().toLowerCase()
 
       // Double-check username collision if changed
       if (trimmedUser !== user.username.toLowerCase()) {
@@ -223,12 +230,23 @@ export default function PerfilPage() {
         }
       }
 
+      // Double-check email collision if changed (non-Google only)
+      if (user.provider !== 'google' && trimmedEmail !== user.email.toLowerCase()) {
+        const emailOk = await authService.checkEmailAvailable(trimmedEmail)
+        if (!emailOk) {
+          setFieldErrors(prev => ({ ...prev, email: 'Ese correo ya está registrado. Por favor elige otro.' }))
+          setSaving(false)
+          return
+        }
+      }
+
       // Proceed to update profile in Firestore (frontend updateProfile hook calls backend endpoint)
       await updateProfile({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         username: trimmedUser,
         avatarUrl,
+        ...(user.provider !== 'google' ? { email: trimmedEmail } : {}),
       })
 
       setFieldErrors({})
@@ -486,18 +504,34 @@ export default function PerfilPage() {
                         <input
                           type="email"
                           value={email}
-                          onChange={(e) => setEmail(e.target.value)}
+                          onChange={(e) => {
+                            if (user.provider !== 'google') {
+                              setEmail(e.target.value)
+                              if (fieldErrors.email) {
+                                setFieldErrors(prev => ({ ...prev, email: '' }))
+                              }
+                              setErrorMessage('')
+                            }
+                          }}
                           onBlur={handleEmailBlur}
-                          disabled
+                          disabled={user.provider === 'google'}
                           className={`auth-input dark:border-slate-800 dark:text-white ${
-                            'opacity-60 bg-slate-50 dark:bg-slate-950/30 border-slate-200/60 dark:border-slate-800/60 cursor-not-allowed text-slate-500 dark:text-slate-500'
+                            user.provider === 'google'
+                              ? 'opacity-60 bg-slate-50 dark:bg-slate-950/30 border-slate-200/60 dark:border-slate-800/60 cursor-not-allowed text-slate-500 dark:text-slate-500'
+                              : 'dark:bg-slate-950'
                           } ${fieldErrors.email ? 'border-red-500 focus:ring-red-500' : ''}`}
                           placeholder="correo@institucion.edu"
                           required
                         />
-                        <span className="text-xs text-slate-400 dark:text-slate-500 italic">
-                          El correo no se puede cambiar.
-                        </span>
+                        {user.provider === 'google' ? (
+                          <span className="text-xs text-slate-400 dark:text-slate-500 italic">
+                            El correo no se puede cambiar (cuenta de Google).
+                          </span>
+                        ) : (
+                          fieldErrors.email && (
+                            <span className="text-xs text-red-500 font-medium">{fieldErrors.email}</span>
+                          )
+                        )}
                       </div>
                     </div>
 
