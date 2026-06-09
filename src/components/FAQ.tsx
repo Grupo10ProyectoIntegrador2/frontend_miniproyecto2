@@ -24,12 +24,12 @@ export default function FAQ() {
   }
 
   return (
-    <section className="bg-slate-50/50 px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
+    <section className="bg-muted/50 px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
       <div className="mx-auto max-w-3xl text-center">
-        <h2 className="text-3xl font-extrabold tracking-tight text-fuchsia-600 sm:text-4xl">
+        <h2 className="text-3xl font-extrabold tracking-tight text-primary dark:text-white sm:text-4xl">
           Preguntas Frecuentes
         </h2>
-        <p className="mt-4 text-lg text-slate-600">
+        <p className="mt-4 text-lg text-muted-foreground">
           Todo lo que necesitas saber sobre Salón de Estudio
         </p>
 
@@ -37,7 +37,7 @@ export default function FAQ() {
           {faqs.map((faq, index) => (
             <div 
               key={index} 
-              className="rounded-xl border border-slate-200 bg-white overflow-hidden transition-all duration-200 hover:border-fuchsia-200"
+              className="rounded-xl border border-border bg-card overflow-hidden transition-all duration-200 hover:border-primary/30"
             >
               <button
                 type="button"
@@ -45,10 +45,10 @@ export default function FAQ() {
                 onClick={() => toggleAccordion(index)}
                 aria-expanded={openIndex === index}
               >
-                <span className="text-sm sm:text-base font-bold text-slate-800">{faq.question}</span>
+                <span className="text-sm sm:text-base font-bold text-foreground">{faq.question}</span>
                 <ChevronDown 
-                  className={`h-5 w-5 text-slate-400 transition-transform duration-300 ${
-                    openIndex === index ? 'rotate-180 text-fuchsia-500' : ''
+                  className={`h-5 w-5 text-muted-foreground transition-transform duration-300 ${
+                    openIndex === index ? 'rotate-180 text-primary' : ''
                   }`} 
                 />
               </button>
@@ -57,7 +57,7 @@ export default function FAQ() {
                   openIndex === index ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'
                 }`}
               >
-                <div className="px-6 pb-5 pt-0 text-sm text-slate-600 leading-relaxed border-t border-slate-100 mt-2 pt-4">
+                <div className="px-6 pb-5 pt-0 text-sm text-muted-foreground leading-relaxed border-t border-border mt-2 pt-4">
                   {faq.answer}
                 </div>
               </div>

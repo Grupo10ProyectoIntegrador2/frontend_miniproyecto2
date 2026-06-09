@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Modo oscuro activado con class="dark" en <html> (no solo prefers-color-scheme) */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ========================================
    Design Tokens - Salon de Estudio
    ======================================== */
@@ -254,4 +257,75 @@ body {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* ========================================
+   Tema oscuro (variables base)
+   ======================================== */
+html.dark {
+  --color-bg: #020617;
+  --color-surface: #0f172a;
+  --color-surface-2: #1e293b;
+  --color-text: #f8fafc;
+  --color-text-muted: #94a3b8;
+  --color-border: #334155;
+  color-scheme: dark;
+}
+
+html.dark body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+/* ========================================
+   Accesibilidad (clases en <html>)
+   ======================================== */
+html.readable-text {
+  font-size: 112.5%;
+}
+
+html.high-contrast {
+  --color-bg: #000000;
+  --color-surface: #000000;
+  --color-surface-2: #111111;
+  --color-text: #ffffff;
+  --color-text-muted: #ffffff;
+  --color-border: #ffffff;
+  --color-primary: #ffff00;
+  color-scheme: dark;
+}
+
+html.high-contrast body {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+html.high-contrast .bg-white,
+html.high-contrast .bg-slate-50,
+html.high-contrast .bg-slate-50\/30,
+html.high-contrast [class*="bg-slate-50"] {
+  background-color: #000000 !important;
+}
+
+html.high-contrast .text-slate-900,
+html.high-contrast .text-slate-800,
+html.high-contrast .text-slate-700,
+html.high-contrast .text-slate-600,
+html.high-contrast .text-slate-500,
+html.high-contrast .text-slate-400 {
+  color: #ffffff !important;
+}
+
+html.high-contrast [class*="border-slate-"] {
+  border-color: #ffffff !important;
+}
+
+html.reduce-motion *,
+html.reduce-motion *::before,
+html.reduce-motion *::after {
+  transition-delay: 0s !important;
+  transition-duration: 0s !important;
+  animation-delay: 0s !important;
+  animation-duration: 0s !important;
+  animation-iteration-count: 1 !important;
 }
