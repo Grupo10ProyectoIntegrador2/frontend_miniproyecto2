@@ -15,7 +15,7 @@ import FormField from '../components/auth/FormField'
 import AvatarSelector from '../components/auth/AvatarSelector'
 import AuthDivider from '../components/auth/AuthDivider'
 import GoogleButton from '../components/auth/GoogleButton'
-import { User, Mail, Lock, AlertCircle, ArrowLeft } from 'lucide-react'
+import { User, Mail, Lock, AlertCircle, ArrowLeft, Eye, EyeOff } from 'lucide-react'
 
 const INITIAL_FORM: RegisterFormData = {
   nombres: '',
@@ -49,6 +49,8 @@ export default function RegistroPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const usernameTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -236,17 +238,17 @@ export default function RegistroPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50/50">
+    <div className="min-h-screen flex flex-col bg-background text-foreground">
       {/* Top Header Navigation */}
       <header className="w-full max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <img src="/logo.png" alt="Salón de Estudio" className="h-8 w-8 object-contain" />
-          <span className="font-semibold text-slate-800 tracking-tight text-base">Salón de Estudio</span>
+          <span className="font-semibold text-foreground tracking-tight text-base">Salón de Estudio</span>
         </div>
 
         <Link
           to="/"
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           Volver
@@ -258,12 +260,12 @@ export default function RegistroPage() {
         id="main-content"
         className="flex-grow flex items-center justify-center px-4 py-8"
       >
-        <div className="w-full max-w-lg bg-white rounded-3xl border border-slate-100 p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)] animate-slide-up">
+        <div className="w-full max-w-lg bg-card rounded-3xl border border-border p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)] animate-slide-up">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent">
               Crear cuenta
             </h1>
-            <p className="mt-2 text-sm text-slate-500">
+            <p className="mt-2 text-sm text-muted-foreground">
               Regístrate para unirte a las salas de estudio
             </p>
           </div>
@@ -289,7 +291,7 @@ export default function RegistroPage() {
                 required
               >
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                   <input
                     id="registro-nombres"
                     type="text"
@@ -312,7 +314,7 @@ export default function RegistroPage() {
                 required
               >
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                   <input
                     id="registro-apellidos"
                     type="text"
@@ -342,7 +344,7 @@ export default function RegistroPage() {
               required
             >
               <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">@</span>
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">@</span>
                 <input
                   id="registro-username"
                   type="text"
@@ -390,7 +392,7 @@ export default function RegistroPage() {
               required
             >
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                 <input
                   id="registro-email"
                   type="email"
@@ -413,11 +415,11 @@ export default function RegistroPage() {
               required
             >
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                 <input
                   id="registro-password"
-                  type="password"
-                  className={getInputClass('password')}
+                  type={showPassword ? 'text' : 'password'}
+                  className={`${getInputClass('password')} pr-10`}
                   placeholder="Tu contraseña"
                   value={form.password}
                   onChange={(e) => updateField('password', e.target.value)}
@@ -425,6 +427,14 @@ export default function RegistroPage() {
                   disabled={isSubmitting}
                   aria-describedby={getInlineError('password') ? 'registro-password-error' : 'registro-password-hint'}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
             </FormField>
 
@@ -436,11 +446,11 @@ export default function RegistroPage() {
               required
             >
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                 <input
                   id="registro-confirm-password"
-                  type="password"
-                  className={getInputClass('confirmPassword')}
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  className={`${getInputClass('confirmPassword')} pr-10`}
                   placeholder="Repite tu contraseña"
                   value={form.confirmPassword}
                   onChange={(e) => updateField('confirmPassword', e.target.value)}
@@ -448,6 +458,14 @@ export default function RegistroPage() {
                   disabled={isSubmitting}
                   aria-describedby={getInlineError('confirmPassword') ? 'registro-confirm-password-error' : 'registro-confirm-password-hint'}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  aria-label={showConfirmPassword ? 'Ocultar confirmación de contraseña' : 'Mostrar confirmación de contraseña'}
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
             </FormField>
 
@@ -467,7 +485,7 @@ export default function RegistroPage() {
             </button>
           </form>
 
-          <p className="mt-8 text-center text-xs text-slate-400 font-medium">
+          <p className="mt-8 text-center text-xs text-muted-foreground font-medium">
             ¿Ya tienes cuenta?{' '}
             <Link
               to="/login"

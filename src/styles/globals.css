@@ -20,6 +20,55 @@
   --radius: 0.75rem;
 }
 
+/* Dark mode theme overrides */
+.dark {
+  --background: #0b0f19;
+  --foreground: #f1f5f9;
+  --card: #111827;
+  --card-foreground: #f1f5f9;
+  --primary: #818cf8;
+  --primary-foreground: #0b0f19;
+  --secondary: #1e1b4b;
+  --secondary-foreground: #c7d2fe;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --accent: #a78bfa;
+  --accent-foreground: #0b0f19;
+  --border: #1f2937;
+  --input: #111827;
+  --ring: rgba(129,140,248,0.24);
+  --radius: 0.75rem;
+}
+
+/* Accessibility style modifications */
+.readable-text {
+  font-size: 1.15rem !important;
+}
+
+.high-contrast {
+  --background: #000000 !important;
+  --foreground: #ffffff !important;
+  --card: #000000 !important;
+  --card-foreground: #ffffff !important;
+  --border: #ffffff !important;
+  --primary: #ffff00 !important;
+  --primary-foreground: #000000 !important;
+  --secondary: #000000 !important;
+  --secondary-foreground: #ffff00 !important;
+  --muted: #111111 !important;
+  --muted-foreground: #ffffff !important;
+  --accent: #ffff00 !important;
+  --accent-foreground: #000000 !important;
+}
+
+.reduce-motion * {
+  transition-delay: 0s !important;
+  transition-duration: 0s !important;
+  animation-delay: 0s !important;
+  animation-duration: 0s !important;
+  animation-iteration-count: 1 !important;
+}
+
 @theme inline {
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --color-background: var(--background);

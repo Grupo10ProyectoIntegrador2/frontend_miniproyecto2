@@ -27,6 +27,14 @@ export interface AuthContextValue {
   completeProfile: (username: string) => Promise<void>
   logout: () => Promise<void>
   clearPendingGoogle: () => void
+  updateProfile: (data: {
+    firstName: string;
+    lastName: string;
+    username: string;
+    avatarUrl: string;
+    email?: string;
+  }) => Promise<void>
+  deleteAccount: () => Promise<void>
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)
@@ -107,6 +115,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPendingGoogleData(null)
   }, [])
 
+  const updateProfile = useCallback(async (data: {
+    firstName: string;
+    lastName: string;
+    username: string;
+    avatarUrl: string;
+    email?: string;
+  }) => {
+    if (!user) throw new Error('No hay usuario autenticado')
+    await authService.updateUserProfile(user.uid, data)
+    setUser((prevUser) => {
+      if (!prevUser) return null
+      return {
+        ...prevUser,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        username: data.username.toLowerCase(),
+        avatarUrl: data.avatarUrl,
+        ...(data.email ? { email: data.email.toLowerCase() } : {}),
+      }
+    })
+  }, [user])
+
+  const deleteAccount = useCallback(async () => {
+    if (!user) throw new Error('No hay usuario autenticado')
+    await authService.deleteUserProfile(user.uid)
+    await authService.logout()
+    setUser(null)
+    setPendingGoogleData(null)
+  }, [user])
+
   return (
     <AuthContext.Provider
       value={{
@@ -119,6 +157,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         completeProfile,
         logout,
         clearPendingGoogle,
+        updateProfile,
+        deleteAccount,
       }}
     >
       {children}

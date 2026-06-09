@@ -17,6 +17,22 @@ export function validateEmail(email: string): string | null {
   if (!EMAIL_REGEX.test(email)) {
     return 'Ingresa un correo electrónico válido'
   }
+  const domain = email.split('@')[1] ?? ''
+  const eduRegex = /\.edu(\.[a-z]{2,})?$/i
+  if (!eduRegex.test(domain)) {
+    return 'Solo se aceptan correos institucionales con dominio .edu (ej: usc.edu.co, correounivalle.edu.co).'
+  }
+  return null
+}
+
+/** Valida solo formato de email sin restricción de dominio (usado en login) */
+export function validateEmailFormat(email: string): string | null {
+  if (!email.trim()) {
+    return 'El correo es obligatorio'
+  }
+  if (!EMAIL_REGEX.test(email)) {
+    return 'Ingresa un correo electrónico válido'
+  }
   return null
 }
 
@@ -28,10 +44,10 @@ export function validatePassword(password: string): string | null {
     return 'La contraseña debe tener al menos 8 caracteres'
   }
   if (!/[A-Z]/.test(password)) {
-    return 'Debe incluir al menos una letra mayuscula'
+    return 'Debe incluir al menos una letra mayúscula'
   }
   if (!/[0-9]/.test(password)) {
-    return 'Debe incluir al menos un numero'
+    return 'Debe incluir al menos un número'
   }
   return null
 }
@@ -47,7 +63,7 @@ export function validateUsername(username: string): string | null {
     return 'El nombre de usuario no puede superar 20 caracteres'
   }
   if (!USERNAME_REGEX.test(username)) {
-    return 'Solo se permiten letras, numeros y guiones bajos'
+    return 'Solo se permiten letras, números y guiones bajos'
   }
   return null
 }
@@ -93,11 +109,22 @@ export function validateRegisterForm(data: RegisterFormData): FieldErrors<Regist
 export function validateLoginForm(data: LoginFormData): FieldErrors<LoginFormData> {
   const errors: FieldErrors<LoginFormData> = {}
 
-  const emailError = validateEmail(data.email)
+  const emailError = validateEmailFormat(data.email)
   if (emailError) errors.email = emailError
 
   const passwordError = validateRequired(data.password, 'La contraseña')
   if (passwordError) errors.password = passwordError
 
   return errors
+}
+
+export function validateRoomName(name: string): string | null {
+  const trimmed = name.trim()
+  if (!trimmed) {
+    return 'El nombre de la sala es obligatorio.'
+  }
+  if (trimmed.length < 3 || trimmed.length > 50) {
+    return 'El nombre debe tener entre 3 y 50 caracteres.'
+  }
+  return null
 }
