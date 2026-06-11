@@ -276,7 +276,28 @@ export default function SalaRoomPage() {
           <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0">
-                <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white">{room.name}</h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white">{room.name}</h1>
+                  {isOwner && (
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => { setNewName(room.name); setEditingName(true) }}
+                        className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-slate-200 bg-white p-1.5 text-slate-500 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-700 active:scale-[0.98] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDeleteRoom}
+                        disabled={deleting}
+                        className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-red-200 bg-white p-1.5 text-red-500 shadow-sm transition-colors hover:bg-red-50 hover:text-red-700 active:scale-[0.98] disabled:opacity-50 dark:border-red-900/40 dark:bg-slate-900 dark:text-red-400 dark:hover:bg-red-950/30"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
                 <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                   {roleLabel} · Sala activa
                 </p>
@@ -307,28 +328,6 @@ export default function SalaRoomPage() {
               </div>
             </div>
           </section>
-
-          {isOwner && (
-            <>
-              <button
-              type="button"
-              onClick={() => { setNewName(room.name); setEditingName(true)}}
-              className='inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 active:scale-[0.98] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200'
-              >
-                <Pencil className='h-4 w-4' />
-                Editar
-              </button>
-              <button
-                type="button"
-                onClick={handleDeleteRoom}
-                disabled={deleting}
-                className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-medium text-red-600 shadow-sm transition-colors hover:bg-red-50 active:scale-[0.98] disabled:opacity-50 dark:border-red-900/40 dark:bg-slate-900 dark:text-red-400 dark:hover:bg-red-950/30"
-              >
-                <Trash2 className="h-4 w-4" />
-                {deleting ? 'Eliminando...' : 'Eliminar'}
-              </button>
-            </>
-          )}
 
           {activityMessage && (
             <div className="mt-6 rounded-2xl border border-blue-100 bg-blue-50/70 px-5 py-3 text-sm font-medium text-blue-700 shadow-sm dark:border-blue-950/40 dark:bg-blue-950/20 dark:text-blue-300">
