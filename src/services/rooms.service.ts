@@ -1,5 +1,5 @@
 import { auth } from '../lib/firebase'
-import type { CreateRoomResponse, JoinRoomResponse, Room, RoomParticipantsResponse, RoomsListResponse, RoomParticipant } from '../types/room.types'
+import { type CreateRoomResponse, type JoinRoomResponse, type Room, type RoomParticipantsResponse, type RoomsListResponse, type RoomParticipant, type DeleteRoomResponse } from '../types/room.types'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
 
@@ -54,4 +54,22 @@ export async function getRoomParticipants(roomId: string): Promise<RoomParticipa
   })
   const data = await handleResponse<RoomParticipantsResponse>(response)
   return data.participants
+}
+
+export async function updateRoom(roomId: string, name: string): Promise<Room> {
+  const response = await fetch(`${API_BASE_URL}/rooms/${roomId}`, {
+    method: 'PUT',
+    headers: await getAuthHeaders(),
+    body: JSON.stringify({ name: name.trim() }),
+  })
+  const data = await handleResponse<CreateRoomResponse>(response)
+  return data.room
+}
+
+export async function deleteRoom(roomId: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/rooms/${roomId}`, {
+    method: 'DELETE',
+    headers: await getAuthHeaders(),
+  })
+  await handleResponse<DeleteRoomResponse>(response)
 }

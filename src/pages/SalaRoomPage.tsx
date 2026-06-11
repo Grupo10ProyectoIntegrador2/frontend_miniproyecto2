@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { use, useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Copy, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, Copy, Loader2, AlertCircle, CheckCircle2, Pencil, Trash2 } from 'lucide-react'
 import DashboardHeader from '../components/DashboardHeader'
 import { useAuth } from '../contexts/useAuth'
+import { auth } from '../lib/firebase'
 import { socket } from '../lib/socket'
-import { getRoomParticipants, joinRoom } from '../services/rooms.service'
+import { getRoomParticipants, joinRoom, updateRoom, deleteRoom } from '../services/rooms.service'
 import type { Room, RoomParticipant } from '../types/room.types'
 
 interface LocationState {
@@ -58,6 +59,10 @@ export default function SalaRoomPage() {
     const [copied, setCopied] = useState(false)
     const [participants, setParticipants] = useState<RoomParticipant[]>([])
     const [activityMessage, setActivityMessage] = useState('')
+    const [editingName, setEditingName] = useState(false)
+    const [newName, setNewName] = useState('')
+    const [saving, setSaving] = useState(false)
+    const [deleting, setDeleting] = useState(false)
 
     useEffect(() => {
       if (!roomId) return
@@ -69,12 +74,12 @@ export default function SalaRoomPage() {
         setError('')
 
         try {
-          const resolvedRoom = state?.room ?? await joinRoom(roomId)
+          const resolvedRoom = state?.room ?? await joinRoom(roomId!)
           if (!cancelled) {
             setRoom(resolvedRoom)
           }
 
-          const roomParticipants = await getRoomParticipants(roomId)
+          const roomParticipants = await getRoomParticipants(roomId!)
           if (!cancelled) {
             setParticipants(sortParticipants(roomParticipants))
           }
@@ -112,7 +117,7 @@ export default function SalaRoomPage() {
         role: room.createdBy === user.uid ? 'Administrador' : 'Participante',
       }
 
-      const handleConnect = () => {
+      const joinRoomSocket = () => {
         socket.emit('join-room', {
           roomId: room.id,
           participant: currentParticipant,
@@ -122,23 +127,32 @@ export default function SalaRoomPage() {
       const handleUserJoined = (payload: UserJoinedPayload) => {
         if (payload.roomId !== room.id || !payload.participant) return
 
-        setParticipants((prev) => upsertParticipant(prev, payload.participant))
+        setParticipants((prev) => upsertParticipant(prev, payload.participant!))
         setActivityMessage(`${getParticipantFullName(payload.participant)} se unió a la sala`)
         window.setTimeout(() => setActivityMessage(''), 3000)
       }
 
-      if (socket.connected) {
-        handleConnect()
-      } else {
-        socket.connect()
-        socket.once('connect', handleConnect)
+      const connectWithAuth = async () => {
+        const token = await auth.currentUser?.getIdToken()
+        if (!token) return
+
+        socket.auth = { token }
+
+        if (socket.connected) {
+          joinRoomSocket()
+        } else {
+          socket.connect()
+          socket.once('connect', joinRoomSocket)
+        }
       }
+
+      void connectWithAuth()
 
       socket.on('user-joined', handleUserJoined)
 
       return () => {
         socket.off('user-joined', handleUserJoined)
-        socket.off('connect', handleConnect)
+        socket.off('connect', joinRoomSocket)
         socket.emit('leave-room', room.id)
         socket.disconnect()
       }
@@ -155,6 +169,38 @@ export default function SalaRoomPage() {
         setCopied(false)
       }
     }
+
+    const handleEditName = async () => {
+  if (!room || !newName.trim() || newName.trim() === room.name) return
+  setSaving(true)
+  try {
+    const updated = await updateRoom(room.id, newName.trim())
+    setRoom(updated)
+    setEditingName(false)
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'No se pudo editar la sala.'
+    setError(message)
+  } finally {
+    setSaving(false)
+  }
+}
+
+    const handleDeleteRoom = async () => {
+  if (!room) return
+  const confirmed = window.confirm('¿Estás seguro de eliminar esta sala? Esta acción no se puede deshacer.')
+  if (!confirmed) return
+  setDeleting(true)
+  try {
+    await deleteRoom(room.id)
+    socket.emit('leave-room', room.id)
+    socket.disconnect()
+    navigate('/dashboard', { replace: true })
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'No se pudo eliminar la sala.'
+    setError(message)
+    setDeleting(false)
+  }
+}
 
     if (!user) return null
 
@@ -262,6 +308,28 @@ export default function SalaRoomPage() {
             </div>
           </section>
 
+          {isOwner && (
+            <>
+              <button
+              type="button"
+              onClick={() => { setNewName(room.name); setEditingName(true)}}
+              className='inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 active:scale-[0.98] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200'
+              >
+                <Pencil className='h-4 w-4' />
+                Editar
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteRoom}
+                disabled={deleting}
+                className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-medium text-red-600 shadow-sm transition-colors hover:bg-red-50 active:scale-[0.98] disabled:opacity-50 dark:border-red-900/40 dark:bg-slate-900 dark:text-red-400 dark:hover:bg-red-950/30"
+              >
+                <Trash2 className="h-4 w-4" />
+                {deleting ? 'Eliminando...' : 'Eliminar'}
+              </button>
+            </>
+          )}
+
           {activityMessage && (
             <div className="mt-6 rounded-2xl border border-blue-100 bg-blue-50/70 px-5 py-3 text-sm font-medium text-blue-700 shadow-sm dark:border-blue-950/40 dark:bg-blue-950/20 dark:text-blue-300">
               {activityMessage}
@@ -353,6 +421,38 @@ export default function SalaRoomPage() {
               </div>
             </aside>
           </div>
+          {editingName && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div className="w-full max-w-md rounded-2xl border border-slate-100 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-900">
+      <h2 className="text-lg font-bold text-slate-900 dark:text-white">Editar nombre de la sala</h2>
+      <input
+        type="text"
+        value={newName}
+        onChange={(e) => setNewName(e.target.value)}
+        maxLength={50}
+        className="mt-4 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+        autoFocus
+      />
+      <div className="mt-5 flex justify-end gap-3">
+        <button
+          type="button"
+          onClick={() => setEditingName(false)}
+          className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          onClick={handleEditName}
+          disabled={saving || newName.trim().length < 3}
+          className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+        >
+          {saving ? 'Guardando...' : 'Guardar'}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
         </main>
       </div>
     )

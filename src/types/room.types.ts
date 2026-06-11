@@ -40,3 +40,14 @@ export interface RoomParticipantsResponse {
   success: boolean
   participants: RoomParticipant[]
 }
+
+export interface UpdateRoomResponse {
+  success: boolean
+  message: string
+  room: Room
+}
+
+export interface DeleteRoomResponse {
+  success: boolean
+  message: string
+}
