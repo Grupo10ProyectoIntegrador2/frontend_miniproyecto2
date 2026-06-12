@@ -51,8 +51,16 @@ export default function UnirsePage() {
     <div className="flex min-h-screen flex-col bg-slate-50/50 transition-colors duration-200 dark:bg-slate-950">
       <DashboardHeader />
 
-      <main id="main-content" className="flex flex-1 flex-col items-center px-4 py-8 sm:px-6">
-        <div className="w-full max-w-lg animate-slide-up">
+      <main id="main-content" className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
+        <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            className="mb-6 inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-slate-500 transition-colors hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Volver al dashboard
+          </button>
+        <div className="mx-auto w-full max-w-lg animate-slide-up">
           <div className="mb-8 text-center">
             <h1 className="bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-3xl font-bold tracking-tight text-transparent">
               Unirse a una Sala

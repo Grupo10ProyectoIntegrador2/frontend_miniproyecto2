@@ -190,7 +190,7 @@ export default function ChatPage() {
 
   if (loading) {
     return (
-      <div className="flex h-screen flex-col overflow-hidden bg-slate-50/30 dark:bg-slate-950">
+      <div className="flex min-h-screen flex-col bg-slate-50/30 dark:bg-slate-950">
         <DashboardHeader />
         <main className="flex flex-1 items-center justify-center text-slate-500 dark:text-slate-400">
           <Loader2 className="mr-2 h-5 w-5 animate-spin" />
