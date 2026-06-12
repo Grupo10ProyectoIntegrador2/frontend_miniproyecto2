@@ -237,7 +237,7 @@ export default function DashboardPage() {
                   {externalRooms.map((room) => (
                     <article
                       key={room.id}
-                      className="flex flex-col rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                      className={`flex flex-col rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 ${externalRooms.length === 1 ? 'sm:col-span-2' : ''}`}
                     >
                       <div className="flex items-start gap-4">
                         <div
