@@ -33,6 +33,7 @@ import PerfilPage from '../pages/PerfilPage'
 import SalasCrearPage from '../pages/SalasCrearPage'
 import SalaRoomPage from '../pages/SalaRoomPage'
 import SalasConfigurarPage from '../pages/SalasConfigurarPage'
+import ChatPage from '../pages/ChatPage'
 import UnirsePage from '../pages/UnirsePage'
 
 // Guards de ruta
@@ -106,6 +107,14 @@ export default function AppRouter() {
           element={
             <ProtectedRoute>
               <SalasConfigurarPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/salas/:roomId/chat"
+          element={
+            <ProtectedRoute>
+              <ChatPage />
             </ProtectedRoute>
           }
         />

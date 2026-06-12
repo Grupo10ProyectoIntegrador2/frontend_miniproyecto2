@@ -268,7 +268,7 @@ export default function SalaRoomPage() {
             </button>
             <button
               type="button"
-              onClick={() => navigate(`/sala/${roomId}/chat`)}
+              onClick={() => navigate(`/salas/${roomId}/chat`)}
               className="px-4 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 border-b-2 border-transparent"
             >
               Chat
