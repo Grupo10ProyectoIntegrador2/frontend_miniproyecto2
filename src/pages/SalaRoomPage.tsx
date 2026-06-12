@@ -259,6 +259,22 @@ export default function SalaRoomPage() {
             Volver al dashboard
           </button>
 
+          <div className="mb-6 flex gap-1 border-b border-slate-200 dark:border-slate-800">
+            <button
+              type="button"
+              className="px-4 py-2.5 text-sm font-semibold text-blue-600 border-b-2 border-blue-600 dark:text-blue-400 dark:border-blue-400"
+            >
+              Sala
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate(`/sala/${roomId}/chat`)}
+              className="px-4 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 border-b-2 border-transparent"
+            >
+              Chat
+            </button>
+          </div>
+
           {justCreated && (
             <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm dark:border-emerald-950/30 dark:bg-slate-900 sm:flex-row sm:items-center sm:justify-between">
               <div>
