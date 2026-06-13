@@ -22,3 +22,32 @@ export interface JoinRoomResponse {
   message: string
   room: Room
 }
+
+export interface RoomParticipant {
+  uid: string
+  firstName: string
+  lastName: string
+  username: string
+  email: string
+  avatarUrl: string
+  provider: 'email' | 'google'
+  createdAt: string
+  joinedAt: string
+  role: 'Administrador' | 'Participante'
+}
+
+export interface RoomParticipantsResponse {
+  success: boolean
+  participants: RoomParticipant[]
+}
+
+export interface UpdateRoomResponse {
+  success: boolean
+  message: string
+  room: Room
+}
+
+export interface DeleteRoomResponse {
+  success: boolean
+  message: string
+}
