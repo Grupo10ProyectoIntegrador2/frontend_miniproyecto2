@@ -128,3 +128,14 @@ export function validateRoomName(name: string): string | null {
   }
   return null
 }
+
+export function validateRoomCode(id: string): string | null {
+  const trimmed = id.trim()
+  if (!trimmed) {
+    return 'Debe ingresar un ID.'
+  }
+  if (trimmed.length !== 20) {
+    return 'El ID de la sala debe tener 20 caracteres.'
+  }
+  return null
+}

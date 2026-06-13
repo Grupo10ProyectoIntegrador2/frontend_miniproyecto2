@@ -1,6 +1,6 @@
 import { useAuth } from '../contexts/useAuth'
 import { useNavigate } from 'react-router-dom'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Users,
   Key,
@@ -32,10 +32,13 @@ function getAvatarColor(name: string): string {
 export default function DashboardPage() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const [rooms, setRooms] = useState<Room[]>([])
+  const [allRooms, setAllRooms] = useState<Room[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  const ownRooms = useMemo(() => allRooms.filter((r) => r.createdBy === user?.uid), [allRooms, user])
+  const externalRooms = useMemo(() => allRooms.filter((r) => r.createdBy !== user?.uid), [allRooms, user])
 
   const loadRooms = useCallback(async () => {
     if (!user) return
@@ -43,7 +46,7 @@ export default function DashboardPage() {
     setError('')
     try {
       const joined = await getJoinedRooms()
-      setRooms(joined.filter((room) => room.createdBy === user.uid))
+      setAllRooms(joined)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'No se pudieron cargar tus salas.'
       setError(message)
@@ -73,7 +76,7 @@ export default function DashboardPage() {
 
   if (!user) return null
 
-  const hasRooms = rooms.length > 0
+  const hasRooms = allRooms.length > 0
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50/30 dark:bg-slate-950 transition-colors duration-200">
@@ -133,75 +136,176 @@ export default function DashboardPage() {
         )}
 
         {!loading && !error && hasRooms && (
-          <section className="mb-16 space-y-6">
-            <div className="rounded-2xl border border-slate-100 bg-white px-6 py-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <p className="text-lg font-bold text-slate-900 dark:text-white">
-                {rooms.length} {rooms.length === 1 ? 'sala lista' : 'salas listas'} para usar
-              </p>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                Entra a tu sala o comparte la ID para invitar a otros integrantes.
-              </p>
-            </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
-            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-              {rooms.map((room) => (
-                <article
-                  key={room.id}
-                  className="flex flex-col rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-                >
-                  <div className="flex items-start gap-4">
-                    <div
-                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
-                      style={{ backgroundColor: getAvatarColor(room.name) }}
+            <section className="space-y-5">
+              <div className="rounded-2xl border border-slate-100 bg-white px-6 py-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <p className="text-lg font-bold text-slate-900 dark:text-white">
+                  Mis Salas
+                </p>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                  {ownRooms.length} {ownRooms.length === 1 ? 'sala creada' : 'salas creadas'} · Eres administrador
+                </p>
+              </div>
+
+              {ownRooms.length > 0 ? (
+                <div className="grid gap-5 sm:grid-cols-2">
+                  {ownRooms.map((room) => (
+                    <article
+                      key={room.id}
+                      className={`flex flex-col rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 ${ownRooms.length === 1 ? 'sm:col-span-2' : ''}`}
                     >
-                      {getRoomInitials(room.name)}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h2 className="truncate text-base font-bold text-slate-900 dark:text-white">
-                        {room.name}
-                      </h2>
-                      <p className="text-xs font-medium text-slate-400 dark:text-slate-500 break-all select-all">
-                        <span>ID </span>
-                        <span className="font-mono">{room.id}</span>
+                      <div className="flex items-start gap-4">
+                        <div
+                          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+                          style={{ backgroundColor: getAvatarColor(room.name) }}
+                        >
+                          {getRoomInitials(room.name)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h2 className="truncate text-base font-bold text-slate-900 dark:text-white">
+                            {room.name}
+                          </h2>
+                          <p className="text-xs font-medium text-slate-400 dark:text-slate-500 break-all select-all">
+                            <span>ID </span>
+                            <span className="font-mono">{room.id}</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      <p className="mt-4 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                        Sala de estudio privada con acceso rápido y administración completa.
                       </p>
-                    </div>
-                  </div>
 
-                  <p className="mt-4 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-                    Sala de estudio privada con acceso rápido y administración completa.
-                  </p>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400">
+                          Administrador
+                        </span>
+                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                          Activa
+                        </span>
+                      </div>
 
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                      Administrador
-                    </span>
-                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                      Activa
-                    </span>
-                  </div>
+                      <div className="mt-5 flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/salas/${room.id}`, { state: { room } })}
+                          className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 active:scale-[0.98] transition-colors cursor-pointer"
+                        >
+                          <ArrowUpRight className="h-4 w-4" />
+                          Entrar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyId(room.id)}
+                          className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 active:scale-[0.98] cursor-pointer"
+                        >
+                          <Copy className="h-4 w-4" />
+                          {copiedId === room.id ? 'Copiado' : 'Copiar ID'}
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white/50 py-12 text-center dark:border-slate-700 dark:bg-slate-900/50">
+                  <Plus className="h-8 w-8 text-slate-300 dark:text-slate-600 mb-3" />
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">No has creado ninguna sala</p>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/salas/crear')}
+                    className="mt-3 text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 cursor-pointer"
+                  >
+                    Crear mi primera sala →
+                  </button>
+                </div>
+              )}
+            </section>
 
-                  <div className="mt-5 flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/salas/${room.id}`, { state: { room } })}
-                      className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 active:scale-[0.98] transition-colors cursor-pointer"
+            <section className="space-y-5">
+              <div className="rounded-2xl border border-slate-100 bg-white px-6 py-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <p className="text-lg font-bold text-slate-900 dark:text-white">
+                  Salas Externas
+                </p>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                  {externalRooms.length} {externalRooms.length === 1 ? 'sala' : 'salas'} · Eres participante
+                </p>
+              </div>
+
+              {externalRooms.length > 0 ? (
+                <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-2">
+                  {externalRooms.map((room) => (
+                    <article
+                      key={room.id}
+                      className={`flex flex-col rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 ${externalRooms.length === 1 ? 'sm:col-span-2' : ''}`}
                     >
-                      <ArrowUpRight className="h-4 w-4" />
-                      Entrar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleCopyId(room.id)}
-                      className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 active:scale-[0.98] cursor-pointer"
-                    >
-                      <Copy className="h-4 w-4" />
-                      {copiedId === room.id ? 'Copiado' : 'Copiar ID'}
-                    </button>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
+                      <div className="flex items-start gap-4">
+                        <div
+                          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+                          style={{ backgroundColor: getAvatarColor(room.name) }}
+                        >
+                          {getRoomInitials(room.name)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h2 className="truncate text-base font-bold text-slate-900 dark:text-white">
+                            {room.name}
+                          </h2>
+                          <p className="text-xs font-medium text-slate-400 dark:text-slate-500 break-all select-all">
+                            <span>ID </span>
+                            <span className="font-mono">{room.id}</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      <p className="mt-4 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                        Sala de estudio a la que te has unido.
+                      </p>
+
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <span className="rounded-full bg-purple-50 px-2.5 py-1 text-[11px] font-semibold text-purple-600 dark:bg-purple-950/40 dark:text-purple-400">
+                          Participante
+                        </span>
+                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                          Activa
+                        </span>
+                      </div>
+
+                      <div className="mt-5 flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/salas/${room.id}`, { state: { room } })}
+                          className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 active:scale-[0.98] transition-colors cursor-pointer"
+                        >
+                          <ArrowUpRight className="h-4 w-4" />
+                          Entrar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyId(room.id)}
+                          className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 active:scale-[0.98] cursor-pointer"
+                        >
+                          <Copy className="h-4 w-4" />
+                          {copiedId === room.id ? 'Copiado' : 'Copiar ID'}
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white/50 py-12 text-center dark:border-slate-700 dark:bg-slate-900/50">
+                  <Key className="h-8 w-8 text-slate-300 dark:text-slate-600 mb-3" />
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">No te has unido a ninguna sala</p>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/unirse')}
+                    className="mt-3 text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 cursor-pointer"
+                  >
+                    Unirme a una sala →
+                  </button>
+                </div>
+              )}
+            </section>
+          </div>
         )}
 
         {!loading && !error && !hasRooms && (
