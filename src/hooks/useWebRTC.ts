@@ -15,7 +15,22 @@ export function useWebRTC(roomId: string, userId: string) {
   const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map())
   
   const peerConnections = useRef<Map<string, RTCPeerConnection>>(new Map())
+  const remoteCandidatesQueue = useRef<Map<string, RTCIceCandidateInit[]>>(new Map())
   const localStreamRef = useRef<MediaStream | null>(null)
+
+  const processQueuedCandidates = useCallback(async (senderSocketId: string, pc: RTCPeerConnection) => {
+    const queue = remoteCandidatesQueue.current.get(senderSocketId)
+    if (queue && queue.length > 0) {
+      for (const candidate of queue) {
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(candidate))
+        } catch (error) {
+          console.error('Error adding queued ICE candidate:', error)
+        }
+      }
+      remoteCandidatesQueue.current.delete(senderSocketId)
+    }
+  }, [])
 
   const startLocalStream = useCallback(async () => {
     try {
@@ -123,6 +138,7 @@ export function useWebRTC(roomId: string, userId: string) {
           targetSocketId: payload.senderSocketId,
           answer,
         })
+        await processQueuedCandidates(payload.senderSocketId, pc)
       } catch (error) {
         console.error('Error handling offer:', error)
       }
@@ -135,6 +151,7 @@ export function useWebRTC(roomId: string, userId: string) {
       if (pc) {
         try {
           await pc.setRemoteDescription(new RTCSessionDescription(payload.answer))
+          await processQueuedCandidates(payload.senderSocketId, pc)
         } catch (error) {
           console.error('Error setting remote description from answer:', error)
         }
@@ -145,12 +162,17 @@ export function useWebRTC(roomId: string, userId: string) {
       if (!payload.senderSocketId || !payload.candidate) return
 
       const pc = peerConnections.current.get(payload.senderSocketId)
-      if (pc) {
+      if (pc && pc.remoteDescription) {
         try {
           await pc.addIceCandidate(new RTCIceCandidate(payload.candidate))
         } catch (error) {
           console.error('Error adding ICE candidate:', error)
         }
+      } else {
+        if (!remoteCandidatesQueue.current.has(payload.senderSocketId)) {
+          remoteCandidatesQueue.current.set(payload.senderSocketId, [])
+        }
+        remoteCandidatesQueue.current.get(payload.senderSocketId)!.push(payload.candidate)
       }
     }
 
@@ -163,6 +185,8 @@ export function useWebRTC(roomId: string, userId: string) {
         pc.close()
         peerConnections.current.delete(payload.socketId)
       }
+      
+      remoteCandidatesQueue.current.delete(payload.socketId)
 
       // Remove from remote streams
       setRemoteStreams((prev) => {
@@ -185,7 +209,7 @@ export function useWebRTC(roomId: string, userId: string) {
       socket.off('candidate', handleCandidate)
       socket.off('user-left', handleUserLeft)
     }
-  }, [roomId, userId, createPeerConnection])
+  }, [roomId, userId, createPeerConnection, processQueuedCandidates])
 
   // Cleanup on unmount
   useEffect(() => {
