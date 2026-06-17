@@ -167,7 +167,7 @@ export function useWebRTC(
     if (!roomId) return
 
     const handleUserJoined = async (payload: { socketId: string; uid: string }) => {
-      if (payload.uid === userId || !payload.socketId) return
+      if (payload.socketId === socket.id || !payload.socketId) return
 
       const pc = createPeerConnection(payload.socketId)
       const dc = pc.createDataChannel('metadata')
