@@ -49,24 +49,55 @@ function formatTime(iso: string): string {
 // Subcomponent: Video Box
 function VideoBox({ stream, isLocal, name, isAudioMuted }: { stream: MediaStream | null, isLocal: boolean, name: string, isAudioMuted?: boolean }) {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const [hasVideo, setHasVideo] = useState(false)
   
   useEffect(() => {
     if (videoRef.current && stream) {
       videoRef.current.srcObject = stream
+      
+      const checkVideoTrack = () => {
+        const videoTrack = stream.getVideoTracks()[0]
+        setHasVideo(!!videoTrack && videoTrack.enabled && !videoTrack.muted && videoTrack.readyState === 'live')
+      }
+      
+      checkVideoTrack()
+      
+      // Listen to track changes
+      stream.onaddtrack = checkVideoTrack
+      stream.onremovetrack = checkVideoTrack
+      
+      const videoTracks = stream.getVideoTracks()
+      videoTracks.forEach(track => {
+        track.onmute = checkVideoTrack
+        track.onunmute = checkVideoTrack
+        track.onended = checkVideoTrack
+      })
+      
+      return () => {
+        stream.onaddtrack = null
+        stream.onremovetrack = null
+        videoTracks.forEach(track => {
+          track.onmute = null
+          track.onunmute = null
+          track.onended = null
+        })
+      }
+    } else {
+      setHasVideo(false)
     }
   }, [stream])
 
   return (
     <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-2xl bg-slate-900 shadow-sm">
-      {stream && stream.getVideoTracks().length > 0 && stream.getVideoTracks()[0].enabled ? (
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted={isLocal}
-          className="h-full w-full object-cover"
-        />
-      ) : (
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted={isLocal}
+        className={`h-full w-full object-cover ${hasVideo ? 'block' : 'hidden'}`}
+      />
+      
+      {!hasVideo && (
         <div className="flex flex-col items-center justify-center text-slate-500">
           <div className="mb-2 flex h-20 w-20 items-center justify-center rounded-full bg-slate-700 text-2xl font-bold text-white shadow-inner">
             {getInitials(name)}
