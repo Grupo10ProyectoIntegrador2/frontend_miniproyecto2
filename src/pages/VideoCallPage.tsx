@@ -15,6 +15,7 @@ import {
   AlertCircle
 } from 'lucide-react'
 import { useAuth } from '../contexts/useAuth'
+import { auth } from '../lib/firebase'
 import { useWebRTC } from '../hooks/useWebRTC'
 import { joinRoom, getRoomParticipants } from '../services/rooms.service'
 import { socket } from '../lib/socket'
