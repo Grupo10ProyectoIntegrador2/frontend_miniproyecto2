@@ -10,6 +10,7 @@ const ICE_SERVERS = {
 
 export function useWebRTC(roomId: string, userId: string) {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null)
+  const [permissionError, setPermissionError] = useState<string | null>(null)
   // Utilizamos socketId como clave para los streams remotos
   const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map())
   
@@ -18,6 +19,7 @@ export function useWebRTC(roomId: string, userId: string) {
 
   const startLocalStream = useCallback(async () => {
     try {
+      setPermissionError(null)
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
       setLocalStream(stream)
       localStreamRef.current = stream
@@ -35,8 +37,15 @@ export function useWebRTC(roomId: string, userId: string) {
       })
       
       return stream
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error accessing media devices:', error)
+      let msg = 'No se pudo acceder a la cámara o al micrófono.'
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        msg = 'Permiso denegado para acceder a la cámara y/o micrófono. Por favor, actívalos en la configuración de tu navegador.'
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        msg = 'No se encontró ninguna cámara o micrófono conectado.'
+      }
+      setPermissionError(msg)
       return null
     }
   }, [])
@@ -216,6 +225,7 @@ export function useWebRTC(roomId: string, userId: string) {
     startLocalStream,
     stopLocalStream,
     toggleMic,
-    toggleCamera
+    toggleCamera,
+    permissionError
   }
 }

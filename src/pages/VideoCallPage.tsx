@@ -107,7 +107,7 @@ export default function VideoCallPage() {
   const [micEnabled, setMicEnabled] = useState(true)
   const [cameraEnabled, setCameraEnabled] = useState(true)
 
-  const { localStream, remoteStreams, startLocalStream, stopLocalStream, toggleMic, toggleCamera } = useWebRTC(roomId!, user?.uid || '')
+  const { localStream, remoteStreams, startLocalStream, stopLocalStream, toggleMic, toggleCamera, permissionError } = useWebRTC(roomId!, user?.uid || '')
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -294,6 +294,12 @@ export default function VideoCallPage() {
         
         {/* Left: Video Grid */}
         <div className="flex flex-1 flex-col justify-between overflow-hidden">
+          {permissionError && (
+            <div className="mb-4 flex items-center gap-3 rounded-2xl border border-red-100 bg-red-50 p-4 text-red-700 shadow-sm">
+              <AlertCircle className="h-5 w-5 shrink-0 text-red-600" />
+              <div className="text-sm font-medium">{permissionError}</div>
+            </div>
+          )}
           {/* Grid */}
           <div className={`flex-1 grid gap-4 p-2 overflow-y-auto ${gridColumns}`}>
             
