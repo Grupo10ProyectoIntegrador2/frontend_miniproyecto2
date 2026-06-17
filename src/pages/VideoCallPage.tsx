@@ -32,7 +32,14 @@ interface ChatMessage {
 }
 
 function getInitials(name: string): string {
-  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+  return name
+    .replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]/g, '')
+    .split(' ')
+    .filter(w => w.length > 0)
+    .map(w => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
 }
 
 const AVATAR_COLORS = ['#6366F1', '#8B5CF6', '#EC4899', '#14B8A6', '#F59E0B', '#10B981', '#3B82F6']
@@ -57,7 +64,9 @@ function VideoBox({ stream, isLocal, name, isAudioMuted }: { stream: MediaStream
       
       const checkVideoTrack = () => {
         const videoTrack = stream.getVideoTracks()[0]
-        setHasVideo(!!videoTrack && videoTrack.enabled && !videoTrack.muted && videoTrack.readyState === 'live')
+        // For remote streams, muted starts true until first RTP packet arrives
+        // Use enabled + readyState for initial render; onmute/onunmute handles later toggles
+        setHasVideo(!!videoTrack && videoTrack.enabled && videoTrack.readyState === 'live')
       }
       
       checkVideoTrack()
@@ -166,7 +175,7 @@ export default function VideoCallPage() {
     })
   }, [])
 
-  const { localStream, remoteStreams, startLocalStream, stopLocalStream, toggleMic, toggleCamera, permissionError } = useWebRTC(
+  const { localStream, remoteStreams, peerSocketIds, startLocalStream, stopLocalStream, toggleMic, toggleCamera, permissionError } = useWebRTC(
     roomId!,
     user?.uid || '',
     localParticipant,
@@ -315,8 +324,16 @@ export default function VideoCallPage() {
 
   const userFullName = user ? `${user.firstName} ${user.lastName}`.trim() || user.username : ''
 
+  // Build set of remote participants (with or without video)
+  // Combine remote streams + activeSockets + peerSocketIds to show participants even without camera
+  const allRemoteSocketIds = new Set([
+    ...Array.from(remoteStreams.keys()),
+    ...Array.from(activeSockets.keys()),
+    ...Array.from(peerSocketIds)
+  ])
+
   // Cálculos para la cuadrícula
-  const totalVideos = remoteStreams.size + 1 // Remotos + Local
+  const totalVideos = allRemoteSocketIds.size + 1 // Remotos + Local
   const gridColumns = totalVideos === 1 ? 'grid-cols-1' :
                       totalVideos === 2 ? 'grid-cols-1 md:grid-cols-2' :
                       totalVideos <= 4 ? 'grid-cols-2' :
@@ -368,10 +385,23 @@ export default function VideoCallPage() {
             </div>
             
             {/* Remote Videos */}
-            {Array.from(remoteStreams.entries()).map(([socketId, stream]) => {
+            {Array.from(allRemoteSocketIds).map((socketId) => {
+              const stream = remoteStreams.get(socketId) || null
               const uid = activeSockets.get(socketId)
-              const participant = participants.find(p => p.uid === uid)
-              const name = participant ? `${participant.firstName} ${participant.lastName}`.trim() || participant.username : 'Conectando...'
+              let participant = uid ? participants.find(p => p.uid === uid) : null
+              
+              // Fallback: if DataChannel metadata hasn't arrived, find unmatched participant
+              if (!participant) {
+                const mappedUids = new Set(activeSockets.values())
+                const unmapped = participants.filter(
+                  p => p.uid !== user?.uid && !mappedUids.has(p.uid)
+                )
+                if (unmapped.length === 1) {
+                  participant = unmapped[0]
+                }
+              }
+              
+              const name = participant ? `${participant.firstName} ${participant.lastName}`.trim() || participant.username : 'Participante'
               const role = participant?.role === 'Administrador' ? 'Prof. ' : ''
               
               return (

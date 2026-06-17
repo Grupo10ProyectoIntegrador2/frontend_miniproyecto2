@@ -12,12 +12,14 @@ export function useWebRTC(
   roomId: string,
   userId: string,
   localParticipant?: any,
-  onPeerMetadataReceived?: (socketId: string, uid: string, participant: any) => void
+  onPeerMetadataReceived?: (socketId: string, uid: string, participant: any) => void,
+  onRemotePeerConnected?: (socketId: string) => void
 ) {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null)
   const [permissionError, setPermissionError] = useState<string | null>(null)
   // Utilizamos socketId como clave para los streams remotos
   const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map())
+  const [peerSocketIds, setPeerSocketIds] = useState<Set<string>>(new Set())
   
   const peerConnections = useRef<Map<string, RTCPeerConnection>>(new Map())
   const remoteCandidatesQueue = useRef<Map<string, RTCIceCandidateInit[]>>(new Map())
@@ -130,6 +132,14 @@ export function useWebRTC(
     const pc = new RTCPeerConnection(ICE_SERVERS)
     peerConnections.current.set(targetSocketId, pc)
 
+    // Track peer socket ID for grid rendering
+    setPeerSocketIds(prev => {
+      const next = new Set(prev)
+      next.add(targetSocketId)
+      return next
+    })
+    onRemotePeerConnected?.(targetSocketId)
+
     pc.onicecandidate = (event) => {
       if (event.candidate) {
         socket.emit('ice-candidate', {
@@ -161,7 +171,7 @@ export function useWebRTC(
     }
 
     return pc
-  }, [setupDataChannel])
+  }, [setupDataChannel, onRemotePeerConnected])
 
   useEffect(() => {
     if (!roomId) return
@@ -247,6 +257,13 @@ export function useWebRTC(
       
       remoteCandidatesQueue.current.delete(payload.socketId)
 
+      // Remove from tracked peers
+      setPeerSocketIds(prev => {
+        const next = new Set(prev)
+        next.delete(payload.socketId)
+        return next
+      })
+
       // Remove from remote streams
       setRemoteStreams((prev) => {
         const newMap = new Map(prev)
@@ -307,6 +324,7 @@ export function useWebRTC(
   return {
     localStream,
     remoteStreams,
+    peerSocketIds,
     startLocalStream,
     stopLocalStream,
     toggleMic,
