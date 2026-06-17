@@ -12,12 +12,10 @@ export function useWebRTC(
   roomId: string,
   userId: string,
   localParticipant?: any,
-  onPeerMetadataReceived?: (socketId: string, uid: string, participant: any) => void,
-  onRemotePeerConnected?: (socketId: string) => void
+  onPeerMetadataReceived?: (socketId: string, uid: string, participant: any) => void
 ) {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null)
   const [permissionError, setPermissionError] = useState<string | null>(null)
-  // Utilizamos socketId como clave para los streams remotos
   const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map())
   const [peerSocketIds, setPeerSocketIds] = useState<Set<string>>(new Set())
   
@@ -26,6 +24,17 @@ export function useWebRTC(
   const dataChannels = useRef<Map<string, RTCDataChannel>>(new Map())
   const localStreamRef = useRef<MediaStream | null>(null)
 
+  // ── Refs to hold latest values for stable closures ──────────────────
+  const localParticipantRef = useRef(localParticipant)
+  localParticipantRef.current = localParticipant
+
+  const userIdRef = useRef(userId)
+  userIdRef.current = userId
+
+  const onPeerMetadataReceivedRef = useRef(onPeerMetadataReceived)
+  onPeerMetadataReceivedRef.current = onPeerMetadataReceived
+
+  // ── Process queued ICE candidates ──────────────────────────────────
   const processQueuedCandidates = useCallback(async (senderSocketId: string, pc: RTCPeerConnection) => {
     const queue = remoteCandidatesQueue.current.get(senderSocketId)
     if (queue && queue.length > 0) {
@@ -40,15 +49,17 @@ export function useWebRTC(
     }
   }, [])
 
+  // ── Setup DataChannel – reads from refs so closure stays fresh ─────
   const setupDataChannel = useCallback((targetSocketId: string, dc: RTCDataChannel) => {
     dataChannels.current.set(targetSocketId, dc)
 
     dc.onopen = () => {
       console.log(`[DataChannel] Canal de metadatos abierto con ${targetSocketId}`)
-      if (localParticipant) {
+      const participant = localParticipantRef.current
+      if (participant) {
         dc.send(JSON.stringify({
-          uid: userId,
-          participant: localParticipant
+          uid: userIdRef.current,
+          participant
         }))
       }
     }
@@ -57,7 +68,7 @@ export function useWebRTC(
       try {
         const data = JSON.parse(event.data)
         console.log(`[DataChannel] Metadatos recibidos de ${targetSocketId}:`, data)
-        onPeerMetadataReceived?.(targetSocketId, data.uid, data.participant)
+        onPeerMetadataReceivedRef.current?.(targetSocketId, data.uid, data.participant)
       } catch (error) {
         console.error('[DataChannel] Error procesando mensaje de metadatos:', error)
       }
@@ -72,17 +83,19 @@ export function useWebRTC(
       console.error(`[DataChannel] Error en canal con ${targetSocketId}:`, err)
     }
 
-    // Si ya está abierto al asignarse
+    // If already open when assigned
     if (dc.readyState === 'open') {
-      if (localParticipant) {
+      const participant = localParticipantRef.current
+      if (participant) {
         dc.send(JSON.stringify({
-          uid: userId,
-          participant: localParticipant
+          uid: userIdRef.current,
+          participant
         }))
       }
     }
-  }, [userId, localParticipant, onPeerMetadataReceived])
+  }, []) // No deps needed – reads from refs
 
+  // ── Media stream management ────────────────────────────────────────
   const startLocalStream = useCallback(async () => {
     try {
       setPermissionError(null)
@@ -90,10 +103,9 @@ export function useWebRTC(
       setLocalStream(stream)
       localStreamRef.current = stream
       
-      // Añadir las pistas a las conexiones existentes (si las hay)
+      // Add tracks to existing peer connections (if any)
       peerConnections.current.forEach((pc) => {
         stream.getTracks().forEach((track) => {
-          // Check if sender already exists
           const senders = pc.getSenders()
           const trackExists = senders.some(sender => sender.track?.id === track.id)
           if (!trackExists) {
@@ -124,6 +136,7 @@ export function useWebRTC(
     }
   }, [])
 
+  // ── Create peer connection – stable callback (no volatile deps) ────
   const createPeerConnection = useCallback((targetSocketId: string) => {
     if (peerConnections.current.has(targetSocketId)) {
       return peerConnections.current.get(targetSocketId)!
@@ -132,13 +145,12 @@ export function useWebRTC(
     const pc = new RTCPeerConnection(ICE_SERVERS)
     peerConnections.current.set(targetSocketId, pc)
 
-    // Track peer socket ID for grid rendering
+    // Track peer for grid rendering
     setPeerSocketIds(prev => {
       const next = new Set(prev)
       next.add(targetSocketId)
       return next
     })
-    onRemotePeerConnected?.(targetSocketId)
 
     // ICE connection monitoring
     pc.oniceconnectionstatechange = () => {
@@ -184,8 +196,9 @@ export function useWebRTC(
     }
 
     return pc
-  }, [setupDataChannel, onRemotePeerConnected])
+  }, [setupDataChannel]) // setupDataChannel is now stable (no deps)
 
+  // ── Socket event listeners – runs only once per roomId ─────────────
   useEffect(() => {
     if (!roomId) return
 
@@ -203,6 +216,7 @@ export function useWebRTC(
           targetSocketId: payload.socketId,
           offer,
         })
+        console.log(`[WebRTC] Offer sent to ${payload.socketId}`)
       } catch (error) {
         console.error('Error creating offer:', error)
       }
@@ -210,6 +224,7 @@ export function useWebRTC(
 
     const handleOffer = async (payload: { senderSocketId: string; offer: RTCSessionDescriptionInit }) => {
       if (!payload.senderSocketId || !payload.offer) return
+      console.log(`[WebRTC] Offer received from ${payload.senderSocketId}`)
       
       const pc = createPeerConnection(payload.senderSocketId)
       try {
@@ -220,6 +235,7 @@ export function useWebRTC(
           targetSocketId: payload.senderSocketId,
           answer,
         })
+        console.log(`[WebRTC] Answer sent to ${payload.senderSocketId}`)
         await processQueuedCandidates(payload.senderSocketId, pc)
       } catch (error) {
         console.error('Error handling offer:', error)
@@ -233,6 +249,7 @@ export function useWebRTC(
       if (pc) {
         try {
           await pc.setRemoteDescription(new RTCSessionDescription(payload.answer))
+          console.log(`[WebRTC] Answer set from ${payload.senderSocketId}`)
           await processQueuedCandidates(payload.senderSocketId, pc)
         } catch (error) {
           console.error('Error setting remote description from answer:', error)
@@ -260,24 +277,24 @@ export function useWebRTC(
 
     const handleUserLeft = (payload: { socketId: string; uid: string }) => {
       if (!payload.socketId) return
+      console.log(`[WebRTC] User left: ${payload.socketId}`)
       
-      // Cleanup peer connection
       const pc = peerConnections.current.get(payload.socketId)
       if (pc) {
         pc.close()
         peerConnections.current.delete(payload.socketId)
       }
       
+      dataChannels.current.get(payload.socketId)?.close()
+      dataChannels.current.delete(payload.socketId)
       remoteCandidatesQueue.current.delete(payload.socketId)
 
-      // Remove from tracked peers
       setPeerSocketIds(prev => {
         const next = new Set(prev)
         next.delete(payload.socketId)
         return next
       })
 
-      // Remove from remote streams
       setRemoteStreams((prev) => {
         const newMap = new Map(prev)
         newMap.delete(payload.socketId)
@@ -298,7 +315,7 @@ export function useWebRTC(
       socket.off('candidate', handleCandidate)
       socket.off('user-left', handleUserLeft)
     }
-  }, [roomId, userId, createPeerConnection, processQueuedCandidates, setupDataChannel])
+  }, [roomId, createPeerConnection, setupDataChannel, processQueuedCandidates])
 
   // Cleanup on unmount
   useEffect(() => {
