@@ -164,6 +164,20 @@ export function useWebRTC(
       console.log(`[WebRTC] Connection state with ${targetSocketId}: ${pc.connectionState}`)
     }
 
+    pc.onnegotiationneeded = async () => {
+      try {
+        console.log(`[WebRTC] Negotiation needed with ${targetSocketId}, creating new offer...`)
+        const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true })
+        await pc.setLocalDescription(offer)
+        socket.emit('offer', {
+          targetSocketId,
+          offer,
+        })
+      } catch (error) {
+        console.error(`[WebRTC] Error during renegotiation with ${targetSocketId}:`, error)
+      }
+    }
+
     pc.onicecandidate = (event) => {
       if (event.candidate) {
         socket.emit('ice-candidate', {
@@ -210,7 +224,7 @@ export function useWebRTC(
       setupDataChannel(payload.socketId, dc)
 
       try {
-        const offer = await pc.createOffer()
+        const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true })
         await pc.setLocalDescription(offer)
         socket.emit('offer', {
           targetSocketId: payload.socketId,
