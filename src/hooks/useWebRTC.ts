@@ -8,7 +8,12 @@ const ICE_SERVERS = {
   ],
 }
 
-export function useWebRTC(roomId: string, userId: string) {
+export function useWebRTC(
+  roomId: string,
+  userId: string,
+  localParticipant?: any,
+  onPeerMetadataReceived?: (socketId: string, uid: string, participant: any) => void
+) {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null)
   const [permissionError, setPermissionError] = useState<string | null>(null)
   // Utilizamos socketId como clave para los streams remotos
@@ -16,6 +21,7 @@ export function useWebRTC(roomId: string, userId: string) {
   
   const peerConnections = useRef<Map<string, RTCPeerConnection>>(new Map())
   const remoteCandidatesQueue = useRef<Map<string, RTCIceCandidateInit[]>>(new Map())
+  const dataChannels = useRef<Map<string, RTCDataChannel>>(new Map())
   const localStreamRef = useRef<MediaStream | null>(null)
 
   const processQueuedCandidates = useCallback(async (senderSocketId: string, pc: RTCPeerConnection) => {
@@ -31,6 +37,49 @@ export function useWebRTC(roomId: string, userId: string) {
       remoteCandidatesQueue.current.delete(senderSocketId)
     }
   }, [])
+
+  const setupDataChannel = useCallback((targetSocketId: string, dc: RTCDataChannel) => {
+    dataChannels.current.set(targetSocketId, dc)
+
+    dc.onopen = () => {
+      console.log(`[DataChannel] Canal de metadatos abierto con ${targetSocketId}`)
+      if (localParticipant) {
+        dc.send(JSON.stringify({
+          uid: userId,
+          participant: localParticipant
+        }))
+      }
+    }
+
+    dc.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data)
+        console.log(`[DataChannel] Metadatos recibidos de ${targetSocketId}:`, data)
+        onPeerMetadataReceived?.(targetSocketId, data.uid, data.participant)
+      } catch (error) {
+        console.error('[DataChannel] Error procesando mensaje de metadatos:', error)
+      }
+    }
+
+    dc.onclose = () => {
+      console.log(`[DataChannel] Canal de metadatos cerrado con ${targetSocketId}`)
+      dataChannels.current.delete(targetSocketId)
+    }
+
+    dc.onerror = (err) => {
+      console.error(`[DataChannel] Error en canal con ${targetSocketId}:`, err)
+    }
+
+    // Si ya está abierto al asignarse
+    if (dc.readyState === 'open') {
+      if (localParticipant) {
+        dc.send(JSON.stringify({
+          uid: userId,
+          participant: localParticipant
+        }))
+      }
+    }
+  }, [userId, localParticipant, onPeerMetadataReceived])
 
   const startLocalStream = useCallback(async () => {
     try {
@@ -98,6 +147,13 @@ export function useWebRTC(roomId: string, userId: string) {
       })
     }
 
+    pc.ondatachannel = (event) => {
+      const dc = event.channel
+      if (dc.label === 'metadata') {
+        setupDataChannel(targetSocketId, dc)
+      }
+    }
+
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((track) => {
         pc.addTrack(track, localStreamRef.current!)
@@ -105,7 +161,7 @@ export function useWebRTC(roomId: string, userId: string) {
     }
 
     return pc
-  }, [])
+  }, [setupDataChannel])
 
   useEffect(() => {
     if (!roomId) return
@@ -114,6 +170,9 @@ export function useWebRTC(roomId: string, userId: string) {
       if (payload.uid === userId || !payload.socketId) return
 
       const pc = createPeerConnection(payload.socketId)
+      const dc = pc.createDataChannel('metadata')
+      setupDataChannel(payload.socketId, dc)
+
       try {
         const offer = await pc.createOffer()
         await pc.setLocalDescription(offer)
@@ -209,7 +268,7 @@ export function useWebRTC(roomId: string, userId: string) {
       socket.off('candidate', handleCandidate)
       socket.off('user-left', handleUserLeft)
     }
-  }, [roomId, userId, createPeerConnection, processQueuedCandidates])
+  }, [roomId, userId, createPeerConnection, processQueuedCandidates, setupDataChannel])
 
   // Cleanup on unmount
   useEffect(() => {
@@ -217,6 +276,8 @@ export function useWebRTC(roomId: string, userId: string) {
       stopLocalStream()
       peerConnections.current.forEach((pc) => pc.close())
       peerConnections.current.clear()
+      dataChannels.current.forEach((dc) => dc.close())
+      dataChannels.current.clear()
       setRemoteStreams(new Map())
     }
   }, [stopLocalStream])

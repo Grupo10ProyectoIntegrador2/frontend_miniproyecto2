@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from 'react'
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Mic,
@@ -138,7 +138,40 @@ export default function VideoCallPage() {
   const [micEnabled, setMicEnabled] = useState(true)
   const [cameraEnabled, setCameraEnabled] = useState(true)
 
-  const { localStream, remoteStreams, startLocalStream, stopLocalStream, toggleMic, toggleCamera, permissionError } = useWebRTC(roomId!, user?.uid || '')
+  const localParticipant = useMemo(() => {
+    if (!user || !room) return undefined
+    return {
+      uid: user.uid,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      username: user.username,
+      email: user.email,
+      avatarUrl: user.avatarUrl,
+      provider: user.provider,
+      createdAt: user.createdAt,
+      joinedAt: new Date().toISOString(),
+      role: room.createdBy === user.uid ? 'Administrador' : 'Participante'
+    }
+  }, [user, room])
+
+  const handlePeerMetadataReceived = useCallback((socketId: string, uid: string, participant: RoomParticipant) => {
+    setActiveSockets(prev => {
+      const next = new Map(prev)
+      next.set(socketId, uid)
+      return next
+    })
+    setParticipants(prev => {
+      const exists = prev.some(p => p.uid === uid)
+      return exists ? prev : [...prev, participant]
+    })
+  }, [])
+
+  const { localStream, remoteStreams, startLocalStream, stopLocalStream, toggleMic, toggleCamera, permissionError } = useWebRTC(
+    roomId!,
+    user?.uid || '',
+    localParticipant,
+    handlePeerMetadataReceived
+  )
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -177,19 +210,9 @@ export default function VideoCallPage() {
       socket.auth = { token }
       
       const joinRoomSocket = () => {
-        const participant: RoomParticipant = {
-          uid: user.uid,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          username: user.username,
-          email: user.email,
-          avatarUrl: user.avatarUrl,
-          provider: user.provider,
-          createdAt: user.createdAt,
-          joinedAt: new Date().toISOString(),
-          role: room.createdBy === user.uid ? 'Administrador' : 'Participante'
+        if (localParticipant) {
+          socket.emit('join-room', { roomId: room.id, participant: localParticipant })
         }
-        socket.emit('join-room', { roomId: room.id, participant })
       }
 
       if (socket.connected) {
@@ -248,7 +271,7 @@ export default function VideoCallPage() {
       socket.disconnect()
       stopLocalStream()
     }
-  }, [room, user, startLocalStream, stopLocalStream])
+  }, [room, user, startLocalStream, stopLocalStream, localParticipant])
 
   const handleSendMessage = () => {
     const trimmed = newMessage.trim()
