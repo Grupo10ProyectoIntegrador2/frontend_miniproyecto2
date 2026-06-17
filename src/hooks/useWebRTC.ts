@@ -140,6 +140,18 @@ export function useWebRTC(
     })
     onRemotePeerConnected?.(targetSocketId)
 
+    // ICE connection monitoring
+    pc.oniceconnectionstatechange = () => {
+      console.log(`[WebRTC] ICE state with ${targetSocketId}: ${pc.iceConnectionState}`)
+      if (pc.iceConnectionState === 'failed') {
+        console.warn(`[WebRTC] ICE failed with ${targetSocketId}, attempting restart`)
+        pc.restartIce()
+      }
+    }
+    pc.onconnectionstatechange = () => {
+      console.log(`[WebRTC] Connection state with ${targetSocketId}: ${pc.connectionState}`)
+    }
+
     pc.onicecandidate = (event) => {
       if (event.candidate) {
         socket.emit('ice-candidate', {
@@ -150,6 +162,7 @@ export function useWebRTC(
     }
 
     pc.ontrack = (event) => {
+      console.log(`[WebRTC] Track received from ${targetSocketId}: kind=${event.track.kind}, readyState=${event.track.readyState}`)
       setRemoteStreams((prev) => {
         const newMap = new Map(prev)
         newMap.set(targetSocketId, event.streams[0])

@@ -59,17 +59,27 @@ function VideoBox({ stream, isLocal, name, isAudioMuted }: { stream: MediaStream
   const [hasVideo, setHasVideo] = useState(false)
   
   useEffect(() => {
-    if (videoRef.current && stream) {
-      videoRef.current.srcObject = stream
+    const el = videoRef.current
+    if (el && stream) {
+      el.srcObject = stream
       
       const checkVideoTrack = () => {
         const videoTrack = stream.getVideoTracks()[0]
-        // For remote streams, muted starts true until first RTP packet arrives
-        // Use enabled + readyState for initial render; onmute/onunmute handles later toggles
         setHasVideo(!!videoTrack && videoTrack.enabled && videoTrack.readyState === 'live')
       }
       
       checkVideoTrack()
+
+      // Autoplay policy: browsers block unmuted autoplay.
+      // Start muted, play, then unmute remote streams for audio.
+      el.muted = true
+      el.play()
+        .then(() => {
+          if (!isLocal) el.muted = false
+        })
+        .catch(() => {
+          // Stays muted if autoplay still blocked
+        })
       
       // Listen to track changes
       stream.onaddtrack = checkVideoTrack
@@ -94,16 +104,16 @@ function VideoBox({ stream, isLocal, name, isAudioMuted }: { stream: MediaStream
     } else {
       setHasVideo(false)
     }
-  }, [stream])
+  }, [stream, isLocal])
 
   return (
     <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-2xl bg-slate-900 shadow-sm">
+      {/* Always keep video in DOM (opacity instead of hidden) so it can receive & decode frames */}
       <video
         ref={videoRef}
         autoPlay
         playsInline
-        muted={isLocal}
-        className={`h-full w-full object-cover ${hasVideo ? 'block' : 'hidden'}`}
+        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${hasVideo ? 'opacity-100' : 'opacity-0'}`}
       />
       
       {!hasVideo && (
