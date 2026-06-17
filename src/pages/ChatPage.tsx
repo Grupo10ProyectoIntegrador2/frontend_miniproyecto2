@@ -385,6 +385,7 @@ export default function ChatPage() {
           <div className="px-3 pb-3">
             <button
               type="button"
+              onClick={() => navigate(`/salas/${roomId}/video`)}
               className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 py-2.5 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 active:scale-[0.98]"
             >
               <MessageSquare size={14} />
@@ -452,6 +453,7 @@ export default function ChatPage() {
             </div>
             <button
               type="button"
+              onClick={() => navigate(`/salas/${roomId}/video`)}
               className="shrink-0 cursor-pointer rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 active:scale-[0.98]"
             >
               Unirme a la llamada

@@ -34,6 +34,7 @@ import SalasCrearPage from '../pages/SalasCrearPage'
 import SalaRoomPage from '../pages/SalaRoomPage'
 import SalasConfigurarPage from '../pages/SalasConfigurarPage'
 import ChatPage from '../pages/ChatPage'
+import VideoCallPage from '../pages/VideoCallPage'
 import UnirsePage from '../pages/UnirsePage'
 
 // Guards de ruta
@@ -115,6 +116,14 @@ export default function AppRouter() {
           element={
             <ProtectedRoute>
               <ChatPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/salas/:roomId/video"
+          element={
+            <ProtectedRoute>
+              <VideoCallPage />
             </ProtectedRoute>
           }
         />
