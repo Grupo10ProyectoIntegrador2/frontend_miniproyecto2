@@ -22,11 +22,15 @@ import {
   Settings,
   ChevronRight,
   Video,
+  Copy,
+  Edit2,
+  Check,
+  Trash2,
 } from 'lucide-react'
 import { useAuth } from '../contexts/useAuth'
 import { auth } from '../lib/firebase'
 import { socket } from '../lib/socket'
-import { joinRoom, getRoomParticipants } from '../services/rooms.service'
+import { joinRoom, getRoomParticipants, updateRoom, deleteRoom } from '../services/rooms.service'
 import type { Room, RoomParticipant } from '../types/room.types'
 
 /* ─────────────── Types ─────────────── */
@@ -115,9 +119,57 @@ export default function ChatPage() {
   const [error, setError] = useState('')
   const [sending, setSending] = useState(false)
   const [activeNav, setActiveNav] = useState<NavTab>('chat')
+  const [copied, setCopied] = useState(false)
+  
+  // Room Management states
+  const [editingName, setEditingName] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const handleCopyId = () => {
+    if (!room) return
+    navigator.clipboard.writeText(room.id)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const isOwner = user && room && room.createdBy === user.uid
+
+  const handleEditName = async () => {
+    if (!room || !newName.trim() || newName.trim() === room.name) return
+    setSaving(true)
+    try {
+      const updated = await updateRoom(room.id, newName.trim())
+      setRoom(updated)
+      setEditingName(false)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'No se pudo editar la sala.'
+      setError(message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDeleteRoom = async () => {
+    if (!room) return
+    const confirmed = window.confirm('¿Estás seguro de eliminar esta sala? Esta acción no se puede deshacer.')
+    if (!confirmed) return
+    setDeleting(true)
+    try {
+      await deleteRoom(room.id)
+      socket.emit('leave-room', room.id)
+      socket.disconnect()
+      navigate('/dashboard', { replace: true })
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'No se pudo eliminar la sala.'
+      setError(message)
+      setDeleting(false)
+    }
+  }
 
   /* ── Auto-scroll ── */
   const scrollToBottom = () =>
@@ -356,6 +408,55 @@ export default function ChatPage() {
                   </p>
                   <p className="text-[11px] text-blue-100">Sesión Activa</p>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* GESTIÓN DE SALA */}
+          <div className="mx-3 mb-4 rounded-xl border border-slate-100 bg-slate-50 p-4 shadow-sm">
+            <div className="mb-3 flex items-center justify-between">
+              <span className="text-[10px] font-bold tracking-wider text-slate-500">GESTIÓN DE SALA</span>
+              {isOwner && (
+                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold text-emerald-700">
+                  PROPIETARIO
+                </span>
+              )}
+            </div>
+
+            <div className="mb-4 flex items-center justify-between">
+              <span className="text-sm font-bold text-slate-900 truncate max-w-[140px]">{room.name}</span>
+              {isOwner && (
+                <div className="flex items-center gap-1">
+                  <button 
+                    onClick={() => { setNewName(room.name); setEditingName(true); }}
+                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700 transition-colors"
+                    title="Editar nombre"
+                  >
+                    <Edit2 size={14} />
+                  </button>
+                  <button 
+                    onClick={handleDeleteRoom}
+                    disabled={deleting}
+                    className="rounded-lg p-1.5 text-slate-400 hover:bg-red-100 hover:text-red-600 transition-colors disabled:opacity-50"
+                    title="Eliminar sala"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <span className="text-[10px] font-bold tracking-wider text-slate-500">ID DE SALA</span>
+              <div className="mt-1 flex items-center gap-2">
+                <span className="text-sm font-bold text-blue-600 truncate max-w-[120px]">#{room.id.substring(0, 8).toUpperCase()}</span>
+                <button 
+                  onClick={handleCopyId}
+                  className="text-blue-600 hover:text-blue-800 transition-colors"
+                  title="Copiar ID completo"
+                >
+                  {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                </button>
               </div>
             </div>
           </div>
@@ -779,6 +880,40 @@ export default function ChatPage() {
           </div>
         </aside>
       </div>
+
+      {/* Edit Name Modal */}
+      {editingName && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="w-full max-w-md rounded-2xl border border-slate-100 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-900">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Editar nombre de la sala</h2>
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              maxLength={50}
+              className="mt-4 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+              autoFocus
+            />
+            <div className="mt-5 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setEditingName(false)}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleEditName}
+                disabled={saving || newName.trim().length < 3}
+                className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {saving ? 'Guardando...' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
