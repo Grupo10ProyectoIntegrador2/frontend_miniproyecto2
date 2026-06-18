@@ -9,8 +9,7 @@ import {
   MoreHorizontal,
   PhoneOff,
   Send,
-  Bell,
-  Settings,
+  ArrowLeft,
   Loader2,
   AlertCircle
 } from 'lucide-react'
@@ -18,6 +17,8 @@ import { useAuth } from '../contexts/useAuth'
 import { useWebRTC } from '../hooks/useWebRTC'
 import { joinRoom, getRoomParticipants } from '../services/rooms.service'
 import { socket } from '../lib/socket'
+import { auth } from '../lib/firebase'
+import DashboardHeader from '../components/DashboardHeader'
 import type { Room, RoomParticipant } from '../types/room.types'
 
 interface ChatMessage {
@@ -109,7 +110,9 @@ export default function VideoCallPage() {
   const { localStream, remoteStreams, startLocalStream, stopLocalStream, toggleMic, toggleCamera } = useWebRTC(roomId!, user?.uid || '')
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' })
+    }
   }, [messages])
 
   // Cargar sala
@@ -136,9 +139,7 @@ export default function VideoCallPage() {
   useEffect(() => {
     if (!room || !user) return
 
-    const initCall = async () => {
-      await startLocalStream()
-      
+    const initSocket = async () => {
       const token = await auth.currentUser?.getIdToken()
       if (!token) return
       
@@ -195,11 +196,15 @@ export default function VideoCallPage() {
     }
 
     const handleNewMessage = (msg: ChatMessage) => {
-      if (msg.roomId !== room.id) return
       setMessages(prev => [...prev, msg])
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+      }, 100)
     }
 
-    initCall()
+    // Iniciar stream y sockets en paralelo
+    void startLocalStream()
+    void initSocket()
 
     socket.on('user-joined', handleUserJoined)
     socket.on('user-left', handleUserLeft)
@@ -221,8 +226,15 @@ export default function VideoCallPage() {
   const handleSendMessage = () => {
     const trimmed = newMessage.trim()
     if (!trimmed || !room) return
-    socket.emit('send-message', { roomId: room.id, content: trimmed })
-    setNewMessage('')
+    try {
+      socket.emit('send-message', { roomId: room.id, content: trimmed })
+      setNewMessage('')
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+      }, 100)
+    } catch {
+      // ignore
+    }
   }
 
   const handleMicToggle = () => {
@@ -269,24 +281,24 @@ export default function VideoCallPage() {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-slate-50 font-sans">
-      {/* Header */}
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-6">
-        <div className="flex items-center gap-4">
-          <h1 className="text-lg font-bold text-blue-800">Salón de Estudio</h1>
-          <div className="flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600">
-            <span className="h-2 w-2 rounded-full bg-red-600 animate-pulse"></span>
-            En vivo • {room.name}
-          </div>
+      {/* Header — same DashboardHeader used in other views */}
+      <DashboardHeader />
+
+      {/* Sub-header: back link + live badge */}
+      <div className="flex h-10 shrink-0 items-center gap-4 border-b border-slate-100 bg-white px-6">
+        <button
+          type="button"
+          onClick={() => navigate('/dashboard')}
+          className="flex items-center gap-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-blue-600 cursor-pointer"
+        >
+          <ArrowLeft size={14} />
+          Volver al dashboard
+        </button>
+        <div className="flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600">
+          <span className="h-2 w-2 rounded-full bg-red-600 animate-pulse"></span>
+          En vivo • {room.name}
         </div>
-        
-        <div className="flex items-center gap-3">
-          <button className="text-slate-400 hover:text-slate-600"><Bell size={18} /></button>
-          <button className="text-slate-400 hover:text-slate-600"><Settings size={18} /></button>
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
-            {getInitials(userFullName)}
-          </div>
-        </div>
-      </header>
+      </div>
 
       {/* Main Layout */}
       <main className="flex flex-1 overflow-hidden p-4 gap-4">
@@ -311,14 +323,13 @@ export default function VideoCallPage() {
               const uid = activeSockets.get(socketId)
               const participant = participants.find(p => p.uid === uid)
               const name = participant ? `${participant.firstName} ${participant.lastName}`.trim() || participant.username : 'Conectando...'
-              const role = participant?.role === 'Administrador' ? 'Prof. ' : ''
               
               return (
                 <div key={socketId} className="w-full h-full min-h-[200px]">
                   <VideoBox 
                     stream={stream} 
                     isLocal={false} 
-                    name={`${role}${name}`} 
+                    name={name} 
                   />
                 </div>
               )
@@ -375,16 +386,44 @@ export default function VideoCallPage() {
 
         {/* Right: Sidebar Chat */}
         <aside className="flex w-[320px] shrink-0 flex-col overflow-hidden rounded-2xl bg-white shadow-sm border border-slate-100">
-          <div className="border-b border-slate-100 px-5 py-4">
-            <h2 className="text-sm font-bold text-slate-900">Classroom</h2>
-            <p className="text-xs text-slate-500">Chat de la sesión</p>
+          {/* Participantes */}
+          <div className="border-b border-slate-100 px-4 py-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-bold text-slate-900">Participantes</h2>
+              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                {participants.length} ONLINE
+              </span>
+            </div>
+            <div className="mt-2 flex flex-col gap-2">
+              {participants.map((p) => {
+                const fullName = `${p.firstName} ${p.lastName}`.trim() || p.username
+                return (
+                  <div key={p.uid} className="flex items-center gap-2">
+                    <div
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                      style={{ backgroundColor: avatarColor(p.uid) }}
+                    >
+                      {getInitials(fullName)}
+                    </div>
+                    <span className="truncate text-xs font-medium text-slate-700">{fullName}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Chat header */}
+          <div className="border-b border-slate-100 px-5 py-3">
+            <h2 className="text-sm font-bold text-slate-900">Chat de la sesión</h2>
           </div>
           
           <div className="flex-1 overflow-y-auto p-4">
             {messages.length === 0 ? (
-              <p className="text-center text-xs text-slate-400">No hay mensajes aún.</p>
+              <div className="flex h-full items-center justify-center">
+                <p className="text-center text-xs text-slate-400">No hay mensajes aún.</p>
+              </div>
             ) : (
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4 pb-2">
                 {messages.map(msg => {
                   const isOwn = msg.senderUid === user?.uid
                   return (
@@ -399,7 +438,7 @@ export default function VideoCallPage() {
                     </div>
                   )
                 })}
-                <div ref={messagesEndRef} />
+                <div ref={messagesEndRef} className="h-1" />
               </div>
             )}
           </div>
