@@ -8,24 +8,104 @@ const ICE_SERVERS = {
   ],
 }
 
-export function useWebRTC(roomId: string, userId: string) {
+export function useWebRTC(
+  roomId: string,
+  userId: string,
+  localParticipant?: any,
+  onPeerMetadataReceived?: (socketId: string, uid: string, participant: any) => void
+) {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null)
-  // Utilizamos socketId como clave para los streams remotos
+  const [permissionError, setPermissionError] = useState<string | null>(null)
   const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map())
+  const [peerSocketIds, setPeerSocketIds] = useState<Set<string>>(new Set())
   
   const peerConnections = useRef<Map<string, RTCPeerConnection>>(new Map())
+  const remoteCandidatesQueue = useRef<Map<string, RTCIceCandidateInit[]>>(new Map())
+  const dataChannels = useRef<Map<string, RTCDataChannel>>(new Map())
   const localStreamRef = useRef<MediaStream | null>(null)
 
+  // ── Refs to hold latest values for stable closures ──────────────────
+  const localParticipantRef = useRef(localParticipant)
+  localParticipantRef.current = localParticipant
+
+  const userIdRef = useRef(userId)
+  userIdRef.current = userId
+
+  const onPeerMetadataReceivedRef = useRef(onPeerMetadataReceived)
+  onPeerMetadataReceivedRef.current = onPeerMetadataReceived
+
+  // ── Process queued ICE candidates ──────────────────────────────────
+  const processQueuedCandidates = useCallback(async (senderSocketId: string, pc: RTCPeerConnection) => {
+    const queue = remoteCandidatesQueue.current.get(senderSocketId)
+    if (queue && queue.length > 0) {
+      for (const candidate of queue) {
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(candidate))
+        } catch (error) {
+          console.error('Error adding queued ICE candidate:', error)
+        }
+      }
+      remoteCandidatesQueue.current.delete(senderSocketId)
+    }
+  }, [])
+
+  // ── Setup DataChannel – reads from refs so closure stays fresh ─────
+  const setupDataChannel = useCallback((targetSocketId: string, dc: RTCDataChannel) => {
+    dataChannels.current.set(targetSocketId, dc)
+
+    dc.onopen = () => {
+      console.log(`[DataChannel] Canal de metadatos abierto con ${targetSocketId}`)
+      const participant = localParticipantRef.current
+      if (participant) {
+        dc.send(JSON.stringify({
+          uid: userIdRef.current,
+          participant
+        }))
+      }
+    }
+
+    dc.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data)
+        console.log(`[DataChannel] Metadatos recibidos de ${targetSocketId}:`, data)
+        onPeerMetadataReceivedRef.current?.(targetSocketId, data.uid, data.participant)
+      } catch (error) {
+        console.error('[DataChannel] Error procesando mensaje de metadatos:', error)
+      }
+    }
+
+    dc.onclose = () => {
+      console.log(`[DataChannel] Canal de metadatos cerrado con ${targetSocketId}`)
+      dataChannels.current.delete(targetSocketId)
+    }
+
+    dc.onerror = (err) => {
+      console.error(`[DataChannel] Error en canal con ${targetSocketId}:`, err)
+    }
+
+    // If already open when assigned
+    if (dc.readyState === 'open') {
+      const participant = localParticipantRef.current
+      if (participant) {
+        dc.send(JSON.stringify({
+          uid: userIdRef.current,
+          participant
+        }))
+      }
+    }
+  }, []) // No deps needed – reads from refs
+
+  // ── Media stream management ────────────────────────────────────────
   const startLocalStream = useCallback(async () => {
     try {
+      setPermissionError(null)
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
       setLocalStream(stream)
       localStreamRef.current = stream
       
-      // Añadir las pistas a las conexiones existentes (si las hay)
+      // Add tracks to existing peer connections (if any)
       peerConnections.current.forEach((pc) => {
         stream.getTracks().forEach((track) => {
-          // Check if sender already exists
           const senders = pc.getSenders()
           const trackExists = senders.some(sender => sender.track?.id === track.id)
           if (!trackExists) {
@@ -35,8 +115,15 @@ export function useWebRTC(roomId: string, userId: string) {
       })
       
       return stream
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error accessing media devices:', error)
+      let msg = 'No se pudo acceder a la cámara o al micrófono.'
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        msg = 'Permiso denegado para acceder a la cámara y/o micrófono. Por favor, actívalos en la configuración de tu navegador.'
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        msg = 'No se encontró ninguna cámara o micrófono conectado.'
+      }
+      setPermissionError(msg)
       return null
     }
   }, [])
@@ -49,6 +136,7 @@ export function useWebRTC(roomId: string, userId: string) {
     }
   }, [])
 
+  // ── Create peer connection – stable callback (no volatile deps) ────
   const createPeerConnection = useCallback((targetSocketId: string) => {
     if (peerConnections.current.has(targetSocketId)) {
       return peerConnections.current.get(targetSocketId)!
@@ -56,6 +144,39 @@ export function useWebRTC(roomId: string, userId: string) {
 
     const pc = new RTCPeerConnection(ICE_SERVERS)
     peerConnections.current.set(targetSocketId, pc)
+
+    // Track peer for grid rendering
+    setPeerSocketIds(prev => {
+      const next = new Set(prev)
+      next.add(targetSocketId)
+      return next
+    })
+
+    // ICE connection monitoring
+    pc.oniceconnectionstatechange = () => {
+      console.log(`[WebRTC] ICE state with ${targetSocketId}: ${pc.iceConnectionState}`)
+      if (pc.iceConnectionState === 'failed') {
+        console.warn(`[WebRTC] ICE failed with ${targetSocketId}, attempting restart`)
+        pc.restartIce()
+      }
+    }
+    pc.onconnectionstatechange = () => {
+      console.log(`[WebRTC] Connection state with ${targetSocketId}: ${pc.connectionState}`)
+    }
+
+    pc.onnegotiationneeded = async () => {
+      try {
+        console.log(`[WebRTC] Negotiation needed with ${targetSocketId}, creating new offer...`)
+        const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true })
+        await pc.setLocalDescription(offer)
+        socket.emit('offer', {
+          targetSocketId,
+          offer,
+        })
+      } catch (error) {
+        console.error(`[WebRTC] Error during renegotiation with ${targetSocketId}:`, error)
+      }
+    }
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
@@ -67,11 +188,19 @@ export function useWebRTC(roomId: string, userId: string) {
     }
 
     pc.ontrack = (event) => {
+      console.log(`[WebRTC] Track received from ${targetSocketId}: kind=${event.track.kind}, readyState=${event.track.readyState}`)
       setRemoteStreams((prev) => {
         const newMap = new Map(prev)
         newMap.set(targetSocketId, event.streams[0])
         return newMap
       })
+    }
+
+    pc.ondatachannel = (event) => {
+      const dc = event.channel
+      if (dc.label === 'metadata') {
+        setupDataChannel(targetSocketId, dc)
+      }
     }
 
     if (localStreamRef.current) {
@@ -81,22 +210,27 @@ export function useWebRTC(roomId: string, userId: string) {
     }
 
     return pc
-  }, [])
+  }, [setupDataChannel]) // setupDataChannel is now stable (no deps)
 
+  // ── Socket event listeners – runs only once per roomId ─────────────
   useEffect(() => {
     if (!roomId) return
 
     const handleUserJoined = async (payload: { socketId: string; uid: string }) => {
-      if (payload.uid === userId || !payload.socketId) return
+      if (payload.socketId === socket.id || !payload.socketId) return
 
       const pc = createPeerConnection(payload.socketId)
+      const dc = pc.createDataChannel('metadata')
+      setupDataChannel(payload.socketId, dc)
+
       try {
-        const offer = await pc.createOffer()
+        const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true })
         await pc.setLocalDescription(offer)
         socket.emit('offer', {
           targetSocketId: payload.socketId,
           offer,
         })
+        console.log(`[WebRTC] Offer sent to ${payload.socketId}`)
       } catch (error) {
         console.error('Error creating offer:', error)
       }
@@ -104,6 +238,7 @@ export function useWebRTC(roomId: string, userId: string) {
 
     const handleOffer = async (payload: { senderSocketId: string; offer: RTCSessionDescriptionInit }) => {
       if (!payload.senderSocketId || !payload.offer) return
+      console.log(`[WebRTC] Offer received from ${payload.senderSocketId}`)
       
       const pc = createPeerConnection(payload.senderSocketId)
       try {
@@ -114,6 +249,8 @@ export function useWebRTC(roomId: string, userId: string) {
           targetSocketId: payload.senderSocketId,
           answer,
         })
+        console.log(`[WebRTC] Answer sent to ${payload.senderSocketId}`)
+        await processQueuedCandidates(payload.senderSocketId, pc)
       } catch (error) {
         console.error('Error handling offer:', error)
       }
@@ -126,6 +263,8 @@ export function useWebRTC(roomId: string, userId: string) {
       if (pc) {
         try {
           await pc.setRemoteDescription(new RTCSessionDescription(payload.answer))
+          console.log(`[WebRTC] Answer set from ${payload.senderSocketId}`)
+          await processQueuedCandidates(payload.senderSocketId, pc)
         } catch (error) {
           console.error('Error setting remote description from answer:', error)
         }
@@ -136,26 +275,40 @@ export function useWebRTC(roomId: string, userId: string) {
       if (!payload.senderSocketId || !payload.candidate) return
 
       const pc = peerConnections.current.get(payload.senderSocketId)
-      if (pc) {
+      if (pc && pc.remoteDescription) {
         try {
           await pc.addIceCandidate(new RTCIceCandidate(payload.candidate))
         } catch (error) {
           console.error('Error adding ICE candidate:', error)
         }
+      } else {
+        if (!remoteCandidatesQueue.current.has(payload.senderSocketId)) {
+          remoteCandidatesQueue.current.set(payload.senderSocketId, [])
+        }
+        remoteCandidatesQueue.current.get(payload.senderSocketId)!.push(payload.candidate)
       }
     }
 
     const handleUserLeft = (payload: { socketId: string; uid: string }) => {
       if (!payload.socketId) return
+      console.log(`[WebRTC] User left: ${payload.socketId}`)
       
-      // Cleanup peer connection
       const pc = peerConnections.current.get(payload.socketId)
       if (pc) {
         pc.close()
         peerConnections.current.delete(payload.socketId)
       }
+      
+      dataChannels.current.get(payload.socketId)?.close()
+      dataChannels.current.delete(payload.socketId)
+      remoteCandidatesQueue.current.delete(payload.socketId)
 
-      // Remove from remote streams
+      setPeerSocketIds(prev => {
+        const next = new Set(prev)
+        next.delete(payload.socketId)
+        return next
+      })
+
       setRemoteStreams((prev) => {
         const newMap = new Map(prev)
         newMap.delete(payload.socketId)
@@ -176,7 +329,7 @@ export function useWebRTC(roomId: string, userId: string) {
       socket.off('candidate', handleCandidate)
       socket.off('user-left', handleUserLeft)
     }
-  }, [roomId, userId, createPeerConnection])
+  }, [roomId, createPeerConnection, setupDataChannel, processQueuedCandidates])
 
   // Cleanup on unmount
   useEffect(() => {
@@ -184,6 +337,8 @@ export function useWebRTC(roomId: string, userId: string) {
       stopLocalStream()
       peerConnections.current.forEach((pc) => pc.close())
       peerConnections.current.clear()
+      dataChannels.current.forEach((dc) => dc.close())
+      dataChannels.current.clear()
       setRemoteStreams(new Map())
     }
   }, [stopLocalStream])
@@ -213,9 +368,11 @@ export function useWebRTC(roomId: string, userId: string) {
   return {
     localStream,
     remoteStreams,
+    peerSocketIds,
     startLocalStream,
     stopLocalStream,
     toggleMic,
-    toggleCamera
+    toggleCamera,
+    permissionError
   }
 }

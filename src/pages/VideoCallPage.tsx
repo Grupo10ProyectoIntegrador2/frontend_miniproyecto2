@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from 'react'
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Mic,
@@ -14,10 +14,10 @@ import {
   AlertCircle
 } from 'lucide-react'
 import { useAuth } from '../contexts/useAuth'
+import { auth } from '../lib/firebase'
 import { useWebRTC } from '../hooks/useWebRTC'
 import { joinRoom, getRoomParticipants } from '../services/rooms.service'
 import { socket } from '../lib/socket'
-import { auth } from '../lib/firebase'
 import DashboardHeader from '../components/DashboardHeader'
 import type { Room, RoomParticipant } from '../types/room.types'
 
@@ -32,7 +32,14 @@ interface ChatMessage {
 }
 
 function getInitials(name: string): string {
-  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+  return name
+    .replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]/g, '')
+    .split(' ')
+    .filter(w => w.length > 0)
+    .map(w => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
 }
 
 const AVATAR_COLORS = ['#6366F1', '#8B5CF6', '#EC4899', '#14B8A6', '#F59E0B', '#10B981', '#3B82F6']
@@ -49,24 +56,67 @@ function formatTime(iso: string): string {
 // Subcomponent: Video Box
 function VideoBox({ stream, isLocal, name, isAudioMuted }: { stream: MediaStream | null, isLocal: boolean, name: string, isAudioMuted?: boolean }) {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const [hasVideo, setHasVideo] = useState(false)
   
   useEffect(() => {
-    if (videoRef.current && stream) {
-      videoRef.current.srcObject = stream
+    const el = videoRef.current
+    if (el && stream) {
+      el.srcObject = stream
+      
+      const checkVideoTrack = () => {
+        const videoTrack = stream.getVideoTracks()[0]
+        setHasVideo(!!videoTrack && videoTrack.enabled && videoTrack.readyState === 'live')
+      }
+      
+      checkVideoTrack()
+
+      // Autoplay policy: browsers block unmuted autoplay.
+      // Start muted, play, then unmute remote streams for audio.
+      el.muted = true
+      el.play()
+        .then(() => {
+          if (!isLocal) el.muted = false
+        })
+        .catch(() => {
+          // Stays muted if autoplay still blocked
+        })
+      
+      // Listen to track changes
+      stream.onaddtrack = checkVideoTrack
+      stream.onremovetrack = checkVideoTrack
+      
+      const videoTracks = stream.getVideoTracks()
+      videoTracks.forEach(track => {
+        track.onmute = checkVideoTrack
+        track.onunmute = checkVideoTrack
+        track.onended = checkVideoTrack
+      })
+      
+      return () => {
+        stream.onaddtrack = null
+        stream.onremovetrack = null
+        videoTracks.forEach(track => {
+          track.onmute = null
+          track.onunmute = null
+          track.onended = null
+        })
+      }
+    } else {
+      setHasVideo(false)
     }
-  }, [stream])
+  }, [stream, isLocal])
 
   return (
     <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-2xl bg-slate-900 shadow-sm">
-      {stream && stream.getVideoTracks().length > 0 && stream.getVideoTracks()[0].enabled ? (
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted={isLocal}
-          className="h-full w-full object-cover"
-        />
-      ) : (
+      {/* Always keep video in DOM (opacity instead of hidden) so it can receive & decode frames */}
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${hasVideo ? 'opacity-100' : 'opacity-0'}`}
+      />
+      
+      {!hasVideo && (
         <div className="flex flex-col items-center justify-center text-slate-500">
           <div className="mb-2 flex h-20 w-20 items-center justify-center rounded-full bg-slate-700 text-2xl font-bold text-white shadow-inner">
             {getInitials(name)}
@@ -107,7 +157,40 @@ export default function VideoCallPage() {
   const [micEnabled, setMicEnabled] = useState(true)
   const [cameraEnabled, setCameraEnabled] = useState(true)
 
-  const { localStream, remoteStreams, startLocalStream, stopLocalStream, toggleMic, toggleCamera } = useWebRTC(roomId!, user?.uid || '')
+  const localParticipant = useMemo(() => {
+    if (!user || !room) return undefined
+    return {
+      uid: user.uid,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      username: user.username,
+      email: user.email,
+      avatarUrl: user.avatarUrl,
+      provider: user.provider,
+      createdAt: user.createdAt,
+      joinedAt: new Date().toISOString(),
+      role: room.createdBy === user.uid ? 'Administrador' : 'Participante'
+    }
+  }, [user, room])
+
+  const handlePeerMetadataReceived = useCallback((socketId: string, uid: string, participant: RoomParticipant) => {
+    setActiveSockets(prev => {
+      const next = new Map(prev)
+      next.set(socketId, uid)
+      return next
+    })
+    setParticipants(prev => {
+      const exists = prev.some(p => p.uid === uid)
+      return exists ? prev : [...prev, participant]
+    })
+  }, [])
+
+  const { localStream, remoteStreams, peerSocketIds, startLocalStream, stopLocalStream, toggleMic, toggleCamera, permissionError } = useWebRTC(
+    roomId!,
+    user?.uid || '',
+    localParticipant,
+    handlePeerMetadataReceived
+  )
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -146,19 +229,9 @@ export default function VideoCallPage() {
       socket.auth = { token }
       
       const joinRoomSocket = () => {
-        const participant: RoomParticipant = {
-          uid: user.uid,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          username: user.username,
-          email: user.email,
-          avatarUrl: user.avatarUrl,
-          provider: user.provider,
-          createdAt: user.createdAt,
-          joinedAt: new Date().toISOString(),
-          role: room.createdBy === user.uid ? 'Administrador' : 'Participante'
+        if (localParticipant) {
+          socket.emit('join-room', { roomId: room.id, participant: localParticipant })
         }
-        socket.emit('join-room', { roomId: room.id, participant })
       }
 
       if (socket.connected) {
@@ -221,7 +294,7 @@ export default function VideoCallPage() {
       socket.disconnect()
       stopLocalStream()
     }
-  }, [room, user, startLocalStream, stopLocalStream])
+  }, [room, user, startLocalStream, stopLocalStream, localParticipant])
 
   const handleSendMessage = () => {
     const trimmed = newMessage.trim()
@@ -272,8 +345,16 @@ export default function VideoCallPage() {
 
   const userFullName = user ? `${user.firstName} ${user.lastName}`.trim() || user.username : ''
 
+  // Build set of remote participants (with or without video)
+  // Combine remote streams + activeSockets + peerSocketIds to show participants even without camera
+  const allRemoteSocketIds = new Set([
+    ...Array.from(remoteStreams.keys()),
+    ...Array.from(activeSockets.keys()),
+    ...Array.from(peerSocketIds)
+  ])
+
   // Cálculos para la cuadrícula
-  const totalVideos = remoteStreams.size + 1 // Remotos + Local
+  const totalVideos = allRemoteSocketIds.size + 1 // Remotos + Local
   const gridColumns = totalVideos === 1 ? 'grid-cols-1' :
                       totalVideos === 2 ? 'grid-cols-1 md:grid-cols-2' :
                       totalVideos <= 4 ? 'grid-cols-2' :
@@ -305,6 +386,12 @@ export default function VideoCallPage() {
         
         {/* Left: Video Grid */}
         <div className="flex flex-1 flex-col justify-between overflow-hidden">
+          {permissionError && (
+            <div className="mb-4 flex items-center gap-3 rounded-2xl border border-red-100 bg-red-50 p-4 text-red-700 shadow-sm">
+              <AlertCircle className="h-5 w-5 shrink-0 text-red-600" />
+              <div className="text-sm font-medium">{permissionError}</div>
+            </div>
+          )}
           {/* Grid */}
           <div className={`flex-1 grid gap-4 p-2 overflow-y-auto ${gridColumns}`}>
             
@@ -319,10 +406,23 @@ export default function VideoCallPage() {
             </div>
             
             {/* Remote Videos */}
-            {Array.from(remoteStreams.entries()).map(([socketId, stream]) => {
+            {Array.from(allRemoteSocketIds).map((socketId) => {
+              const stream = remoteStreams.get(socketId) || null
               const uid = activeSockets.get(socketId)
-              const participant = participants.find(p => p.uid === uid)
-              const name = participant ? `${participant.firstName} ${participant.lastName}`.trim() || participant.username : 'Conectando...'
+              let participant = uid ? participants.find(p => p.uid === uid) : null
+              
+              // Fallback: if DataChannel metadata hasn't arrived, find unmatched participant
+              if (!participant) {
+                const mappedUids = new Set(activeSockets.values())
+                const unmapped = participants.filter(
+                  p => p.uid !== user?.uid && !mappedUids.has(p.uid)
+                )
+                if (unmapped.length === 1) {
+                  participant = unmapped[0]
+                }
+              }
+              
+              const name = participant ? `${participant.firstName} ${participant.lastName}`.trim() || participant.username : 'Participante'
               
               return (
                 <div key={socketId} className="w-full h-full min-h-[200px]">
