@@ -363,7 +363,7 @@ export default function VideoCallPage() {
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-slate-50 font-sans">
       {/* Header — same DashboardHeader used in other views */}
-      <DashboardHeader />
+      <DashboardHeader fullWidth={true} />
 
       {/* Sub-header: back link + live badge */}
       <div className="flex h-10 shrink-0 items-center gap-4 border-b border-slate-100 bg-white px-6">
