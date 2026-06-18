@@ -34,6 +34,7 @@ import { useAuth } from '../contexts/useAuth'
 import { auth } from '../lib/firebase'
 import { socket } from '../lib/socket'
 import { joinRoom, getRoomParticipants, updateRoom, deleteRoom } from '../services/rooms.service'
+import DashboardHeader from '../components/DashboardHeader'
 import type { Room, RoomParticipant } from '../types/room.types'
 
 /* ─────────────── Types ─────────────── */
@@ -348,50 +349,7 @@ export default function ChatPage() {
       style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
     >
       {/* ════════════════════ TOP HEADER ════════════════════ */}
-      <header className="flex h-14 shrink-0 items-center border-b border-slate-200 bg-white px-4">
-        {/* Left: brand */}
-        <div className="flex w-52 shrink-0 items-center gap-2">
-          <BookOpen className="h-5 w-5 text-blue-600" />
-          <span className="text-sm font-bold text-slate-900">
-            Salón de Estudio
-          </span>
-        </div>
-
-        {/* Center: active tab */}
-        <div className="flex flex-1 items-center gap-6 px-4">
-          <button
-            type="button"
-            className="border-b-2 border-blue-600 pb-0.5 text-sm font-semibold text-blue-600 transition-colors"
-          >
-            Colaboración
-          </button>
-        </div>
-
-        {/* Right: actions */}
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            aria-label="Notificaciones"
-            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
-          >
-            <Bell size={18} />
-          </button>
-          <button
-            type="button"
-            aria-label="Configuración"
-            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
-          >
-            <Settings size={18} />
-          </button>
-          <div
-            className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white"
-            style={{ backgroundColor: user ? avatarColor(user.uid) : '#2563EB' }}
-            title={userFullName}
-          >
-            {userFullName ? getInitials(userFullName) : 'U'}
-          </div>
-        </div>
-      </header>
+      <DashboardHeader />
 
       {/* ════════════════════ CONTENT ════════════════════ */}
       <div className="flex flex-1 overflow-hidden">
@@ -750,7 +708,6 @@ export default function ChatPage() {
             {participants.slice(0, 3).map((p) => {
               const fullName =
                 `${p.firstName} ${p.lastName}`.trim() || p.username
-              const isAdmin = p.role === 'Administrador'
               const color = avatarColor(p.uid)
               return (
                 <div key={p.uid} className="flex items-center gap-2.5">
@@ -763,13 +720,6 @@ export default function ChatPage() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[13px] font-semibold text-slate-800">
                       {fullName}
-                    </p>
-                    <p
-                      className={`text-[11px] font-semibold ${
-                        isAdmin ? 'text-emerald-600' : 'text-slate-400'
-                      }`}
-                    >
-                      {isAdmin ? 'PROFESOR' : 'Estudiante'}
                     </p>
                   </div>
                   <button
