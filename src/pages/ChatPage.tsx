@@ -26,6 +26,9 @@ import {
   Edit2,
   Check,
   Trash2,
+  Play,
+  Search,
+  MoreVertical,
 } from 'lucide-react'
 import { useAuth } from '../contexts/useAuth'
 import { auth } from '../lib/firebase'
@@ -515,51 +518,45 @@ export default function ChatPage() {
         </aside>
 
         {/* ──────────── MAIN CHAT ──────────── */}
-        <main className="flex flex-1 flex-col overflow-hidden">
-          {/* Active call banner */}
-          <div className="flex shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-5 py-3 shadow-sm">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50">
-              <Phone size={15} className="text-blue-600" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-slate-800">
-                Llamada activa en esta sala
-              </p>
-              <div className="mt-0.5 flex items-center gap-2">
-                {/* Stacked avatars */}
-                <div className="flex">
-                  {participants.slice(0, 4).map((p, i) => (
-                    <div
-                      key={p.uid}
-                      className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-white text-[9px] font-bold text-white"
-                      style={{
-                        backgroundColor: avatarColor(p.uid),
-                        marginLeft: i > 0 ? '-5px' : '0',
-                        zIndex: 4 - i,
-                        position: 'relative',
-                      }}
-                    >
-                      {getInitials(`${p.firstName} ${p.lastName}`)}
-                    </div>
-                  ))}
-                </div>
-                <span className="text-xs text-slate-400">
-                  {participants.length > 4
-                    ? `+${participants.length - 4} otros unidos`
-                    : participants.length === 1
-                      ? '1 en la llamada'
-                      : `${participants.length} en la llamada`}
-                </span>
-              </div>
+        <main className="flex flex-1 flex-col overflow-hidden bg-slate-50/50 p-4 gap-4">
+          
+          {/* Top Card: Start Video Call */}
+          <div className="flex shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 py-6 shadow-sm relative min-h-[96px]">
+            <div className="absolute left-6 flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-2xl bg-blue-600 shadow-md">
+              <Video size={28} className="text-white" />
             </div>
             <button
               type="button"
               onClick={() => navigate(`/salas/${roomId}/video`)}
-              className="shrink-0 cursor-pointer rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 active:scale-[0.98]"
+              className="flex items-center gap-2 rounded-xl bg-[#0047E1] px-8 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-800 active:scale-[0.98]"
             >
-              Unirme a la llamada
+              <Play size={16} className="fill-current" />
+              Iniciar una videollamada
             </button>
           </div>
+
+          {/* Chat Container Card */}
+          <div className="flex flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            {/* Header inside chat container */}
+            <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-6 py-4">
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50/80">
+                  <BookOpen size={22} className="text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="text-[15px] font-bold text-slate-900 leading-tight">{room.name}</h2>
+                  <p className="text-[13px] text-slate-500 mt-0.5">{participants.length} participantes activos</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button className="rounded-full p-2.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors">
+                  <Search size={20} />
+                </button>
+                <button className="rounded-full p-2.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors">
+                  <MoreVertical size={20} />
+                </button>
+              </div>
+            </div>
 
           {/* Messages list */}
           <div
@@ -726,6 +723,7 @@ export default function ChatPage() {
               </button>
             </div>
           </div>
+        </div>
         </main>
 
         {/* ──────────── RIGHT SIDEBAR ──────────── */}
