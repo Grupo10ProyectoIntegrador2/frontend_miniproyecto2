@@ -275,9 +275,13 @@ export default function VideoCallPage() {
       }, 100)
     }
 
-    // Iniciar stream y sockets en paralelo
-    void startLocalStream()
-    void initSocket()
+    // Iniciar stream ANTES de conectar sockets para que los tracks
+    // locales estén disponibles cuando lleguen eventos user-joined
+    const init = async () => {
+      await startLocalStream()
+      await initSocket()
+    }
+    void init()
 
     socket.on('user-joined', handleUserJoined)
     socket.on('user-left', handleUserLeft)
