@@ -24,6 +24,10 @@ export function useWebRTC(
   const dataChannels = useRef<Map<string, RTCDataChannel>>(new Map())
   const localStreamRef = useRef<MediaStream | null>(null)
 
+  // ── Perfect Negotiation state ──────────────────────────────────────
+  const makingOffer = useRef<Map<string, boolean>>(new Map())
+  const ignoreOffer = useRef<Map<string, boolean>>(new Map())
+
   // ── Refs to hold latest values for stable closures ──────────────────
   const localParticipantRef = useRef(localParticipant)
   localParticipantRef.current = localParticipant
@@ -33,6 +37,11 @@ export function useWebRTC(
 
   const onPeerMetadataReceivedRef = useRef(onPeerMetadataReceived)
   onPeerMetadataReceivedRef.current = onPeerMetadataReceived
+
+
+  const isPolite = useCallback((targetSocketId: string): boolean => {
+    return (socket.id ?? '') < targetSocketId
+  }, [])
 
   // ── Process queued ICE candidates ──────────────────────────────────
   const processQueuedCandidates = useCallback(async (senderSocketId: string, pc: RTCPeerConnection) => {
@@ -104,6 +113,7 @@ export function useWebRTC(
       localStreamRef.current = stream
       
       // Add tracks to existing peer connections (if any)
+      // onnegotiationneeded will fire automatically and handle renegotiation
       peerConnections.current.forEach((pc) => {
         stream.getTracks().forEach((track) => {
           const senders = pc.getSenders()
@@ -136,7 +146,7 @@ export function useWebRTC(
     }
   }, [])
 
-  // ── Create peer connection – stable callback (no volatile deps) ────
+  // ── Create peer connection – Perfect Negotiation pattern ───────────
   const createPeerConnection = useCallback((targetSocketId: string) => {
     if (peerConnections.current.has(targetSocketId)) {
       return peerConnections.current.get(targetSocketId)!
@@ -144,6 +154,8 @@ export function useWebRTC(
 
     const pc = new RTCPeerConnection(ICE_SERVERS)
     peerConnections.current.set(targetSocketId, pc)
+    makingOffer.current.set(targetSocketId, false)
+    ignoreOffer.current.set(targetSocketId, false)
 
     // Track peer for grid rendering
     setPeerSocketIds(prev => {
@@ -164,17 +176,26 @@ export function useWebRTC(
       console.log(`[WebRTC] Connection state with ${targetSocketId}: ${pc.connectionState}`)
     }
 
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach((track) => {
+        pc.addTrack(track, localStreamRef.current!)
+      })
+    }
+
     pc.onnegotiationneeded = async () => {
       try {
-        console.log(`[WebRTC] Negotiation needed with ${targetSocketId}, creating new offer...`)
-        const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true })
-        await pc.setLocalDescription(offer)
+        console.log(`[WebRTC] Negotiation needed with ${targetSocketId} (signalingState: ${pc.signalingState})`)
+        makingOffer.current.set(targetSocketId, true)
+        await pc.setLocalDescription()
         socket.emit('offer', {
           targetSocketId,
-          offer,
+          offer: pc.localDescription,
         })
+        console.log(`[WebRTC] Offer sent to ${targetSocketId}`)
       } catch (error) {
         console.error(`[WebRTC] Error during renegotiation with ${targetSocketId}:`, error)
+      } finally {
+        makingOffer.current.set(targetSocketId, false)
       }
     }
 
@@ -203,12 +224,6 @@ export function useWebRTC(
       }
     }
 
-    if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach((track) => {
-        pc.addTrack(track, localStreamRef.current!)
-      })
-    }
-
     return pc
   }, [setupDataChannel]) // setupDataChannel is now stable (no deps)
 
@@ -218,36 +233,42 @@ export function useWebRTC(
 
     const handleUserJoined = async (payload: { socketId: string; uid: string }) => {
       if (payload.socketId === socket.id || !payload.socketId) return
+      console.log(`[WebRTC] User joined: ${payload.socketId}`)
 
       const pc = createPeerConnection(payload.socketId)
+
+      // Creating the DataChannel triggers onnegotiationneeded → offer
       const dc = pc.createDataChannel('metadata')
       setupDataChannel(payload.socketId, dc)
-
-      try {
-        const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true })
-        await pc.setLocalDescription(offer)
-        socket.emit('offer', {
-          targetSocketId: payload.socketId,
-          offer,
-        })
-        console.log(`[WebRTC] Offer sent to ${payload.socketId}`)
-      } catch (error) {
-        console.error('Error creating offer:', error)
-      }
     }
 
+    // ── handleOffer: Perfect Negotiation collision handling ───────────
     const handleOffer = async (payload: { senderSocketId: string; offer: RTCSessionDescriptionInit }) => {
       if (!payload.senderSocketId || !payload.offer) return
       console.log(`[WebRTC] Offer received from ${payload.senderSocketId}`)
-      
+
       const pc = createPeerConnection(payload.senderSocketId)
+      const polite = isPolite(payload.senderSocketId)
+
+      const offerCollision =
+        makingOffer.current.get(payload.senderSocketId) ||
+        pc.signalingState !== 'stable'
+        
+      const shouldIgnore = !polite && offerCollision
+      ignoreOffer.current.set(payload.senderSocketId, shouldIgnore)
+
+      if (shouldIgnore) {
+        console.log(`[WebRTC] Ignoring colliding offer from ${payload.senderSocketId} (impolite peer)`)
+        return
+      }
+
       try {
+        // Polite peer rolls back its own offer if there's a collision
         await pc.setRemoteDescription(new RTCSessionDescription(payload.offer))
-        const answer = await pc.createAnswer()
-        await pc.setLocalDescription(answer)
+        await pc.setLocalDescription()
         socket.emit('answer', {
           targetSocketId: payload.senderSocketId,
-          answer,
+          answer: pc.localDescription,
         })
         console.log(`[WebRTC] Answer sent to ${payload.senderSocketId}`)
         await processQueuedCandidates(payload.senderSocketId, pc)
@@ -256,18 +277,25 @@ export function useWebRTC(
       }
     }
 
+    // ── handleAnswer: guard with signaling state ─────────────────────
     const handleAnswer = async (payload: { senderSocketId: string; answer: RTCSessionDescriptionInit }) => {
       if (!payload.senderSocketId || !payload.answer) return
 
       const pc = peerConnections.current.get(payload.senderSocketId)
-      if (pc) {
-        try {
-          await pc.setRemoteDescription(new RTCSessionDescription(payload.answer))
-          console.log(`[WebRTC] Answer set from ${payload.senderSocketId}`)
-          await processQueuedCandidates(payload.senderSocketId, pc)
-        } catch (error) {
-          console.error('Error setting remote description from answer:', error)
-        }
+      if (!pc) return
+
+      // Only accept answers when we're expecting one
+      if (pc.signalingState !== 'have-local-offer') {
+        console.warn(`[WebRTC] Ignoring answer from ${payload.senderSocketId} – unexpected state: ${pc.signalingState}`)
+        return
+      }
+
+      try {
+        await pc.setRemoteDescription(new RTCSessionDescription(payload.answer))
+        console.log(`[WebRTC] Answer set from ${payload.senderSocketId}`)
+        await processQueuedCandidates(payload.senderSocketId, pc)
+      } catch (error) {
+        console.error('Error setting remote description from answer:', error)
       }
     }
 
@@ -279,7 +307,10 @@ export function useWebRTC(
         try {
           await pc.addIceCandidate(new RTCIceCandidate(payload.candidate))
         } catch (error) {
-          console.error('Error adding ICE candidate:', error)
+          // Ignore candidates for offers we've decided to ignore
+          if (!ignoreOffer.current.get(payload.senderSocketId)) {
+            console.error('Error adding ICE candidate:', error)
+          }
         }
       } else {
         if (!remoteCandidatesQueue.current.has(payload.senderSocketId)) {
@@ -299,6 +330,10 @@ export function useWebRTC(
         peerConnections.current.delete(payload.socketId)
       }
       
+      // Clean up Perfect Negotiation state
+      makingOffer.current.delete(payload.socketId)
+      ignoreOffer.current.delete(payload.socketId)
+
       dataChannels.current.get(payload.socketId)?.close()
       dataChannels.current.delete(payload.socketId)
       remoteCandidatesQueue.current.delete(payload.socketId)
@@ -329,7 +364,7 @@ export function useWebRTC(
       socket.off('candidate', handleCandidate)
       socket.off('user-left', handleUserLeft)
     }
-  }, [roomId, createPeerConnection, setupDataChannel, processQueuedCandidates])
+  }, [roomId, createPeerConnection, setupDataChannel, processQueuedCandidates, isPolite])
 
   // Cleanup on unmount
   useEffect(() => {
@@ -339,6 +374,8 @@ export function useWebRTC(
       peerConnections.current.clear()
       dataChannels.current.forEach((dc) => dc.close())
       dataChannels.current.clear()
+      makingOffer.current.clear()
+      ignoreOffer.current.clear()
       setRemoteStreams(new Map())
     }
   }, [stopLocalStream])
