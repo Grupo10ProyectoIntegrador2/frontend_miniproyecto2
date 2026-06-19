@@ -30,7 +30,7 @@ export default function SalasCrearPage() {
 
     try {
       const room = await createRoom(name)
-      navigate(`/salas/${room.id}`, { state: { room, justCreated: true }, replace: true })
+      navigate(`/salas/${room.id}/chat`, { state: { room, justCreated: true }, replace: true })
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'No se pudo crear la sala. Intenta de nuevo.'
       setError(message)
