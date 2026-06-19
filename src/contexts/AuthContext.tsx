@@ -50,9 +50,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
           
+          const idToken = await firebaseUser.getIdToken();
           const response = await fetch(`${API_BASE_URL}/auth/login`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${idToken}`
+            },
             body: JSON.stringify({ uid: firebaseUser.uid }),
           });
           

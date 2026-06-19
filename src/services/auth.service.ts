@@ -35,11 +35,20 @@ async function callBackendAPI<T>(
   endpoint: string,
   body: any,
 ): Promise<T> {
+  const currentUser = auth.currentUser;
+  const token = currentUser ? await currentUser.getIdToken() : null;
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: JSON.stringify(body),
   });
 
@@ -166,9 +175,13 @@ export async function loginWithGoogle(): Promise<GoogleAuthResult> {
 
   // Llamar al backend para verificar si es nuevo usuario
   try {
+    const idToken = await user.getIdToken();
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${idToken}`
+      },
       body: JSON.stringify({ uid: user.uid }),
     });
 
