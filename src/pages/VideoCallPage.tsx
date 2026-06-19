@@ -501,6 +501,7 @@ export default function VideoCallPage() {
             <div className="mt-2 flex flex-col gap-2">
               {participants.map((p) => {
                 const fullName = `${p.firstName} ${p.lastName}`.trim() || p.username
+                const isAdmin = p.uid === room.createdBy || p.role === 'Administrador'
                 return (
                   <div key={p.uid} className="flex items-center gap-2">
                     <div
@@ -510,6 +511,11 @@ export default function VideoCallPage() {
                       {getInitials(fullName)}
                     </div>
                     <span className="truncate text-xs font-medium text-slate-700">{fullName}</span>
+                    {isAdmin && (
+                      <span className="shrink-0 rounded bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-700">
+                        ADMINISTRADOR
+                      </span>
+                    )}
                   </div>
                 )
               })}
@@ -530,10 +536,20 @@ export default function VideoCallPage() {
               <div className="flex flex-col gap-4 pb-2">
                 {messages.map(msg => {
                   const isOwn = msg.senderUid === user?.uid
+                  const isAdmin = msg.senderUid === room.createdBy
                   return (
                     <div key={msg.id} className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}>
                       <div className="mb-1 flex items-center gap-2">
-                        {!isOwn && <span className="text-xs font-semibold text-blue-600">{msg.senderName}</span>}
+                        {!isOwn && (
+                          <>
+                            <span className="text-xs font-semibold text-blue-600">{msg.senderName}</span>
+                            {isAdmin && (
+                              <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-700">
+                                ADMINISTRADOR
+                              </span>
+                            )}
+                          </>
+                        )}
                         <span className="text-[10px] text-slate-400">{formatTime(msg.createdAt)} {isOwn && 'Tú'}</span>
                       </div>
                       <div className={`rounded-2xl px-4 py-2.5 text-sm ${isOwn ? 'bg-blue-700 text-white rounded-tr-sm' : 'bg-slate-50 text-slate-700 rounded-tl-sm border border-slate-100'}`}>
