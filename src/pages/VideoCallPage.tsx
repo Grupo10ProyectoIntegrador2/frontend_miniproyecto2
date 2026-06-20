@@ -20,6 +20,7 @@ import { joinRoom, getRoomParticipants } from '../services/rooms.service'
 import { socket } from '../lib/socket'
 import DashboardHeader from '../components/DashboardHeader'
 import type { Room, RoomParticipant } from '../types/room.types'
+import type { VideoCallStatus } from '../types/videoCall.types'
 
 interface ChatMessage {
   id: string
@@ -53,11 +54,60 @@ function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
 }
 
+function isAvatarImage(url?: string): boolean {
+  if (!url) return false
+  return url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')
+}
+
+const PRESET_AVATAR_COLORS: Record<string, string> = {
+  'avatar-1': '#6c63ff',
+  'avatar-2': '#10b981',
+  'avatar-3': '#f59e0b',
+  'avatar-4': '#ef4444',
+  'avatar-5': '#3b82f6',
+  'avatar-6': '#ec4899',
+  'avatar-7': '#8b5cf6',
+  'avatar-8': '#14b8a6',
+}
+
+function resolveAvatarBackground(uid: string, avatarUrl?: string): string {
+  if (avatarUrl && !isAvatarImage(avatarUrl)) {
+    return PRESET_AVATAR_COLORS[avatarUrl] ?? avatarColor(uid)
+  }
+  return avatarColor(uid)
+}
+
+function cleanDisplayName(name: string): string {
+  return name.replace(/^Tú\s*\(/, '').replace(/\)$/, '').trim() || name
+}
+
 // Subcomponent: Video Box
-function VideoBox({ stream, isLocal, name, isAudioMuted }: { stream: MediaStream | null, isLocal: boolean, name: string, isAudioMuted?: boolean }) {
+function VideoBox({
+  stream,
+  isLocal,
+  name,
+  displayName,
+  uid = '',
+  avatarUrl,
+  isAudioMuted,
+  cameraOn,
+}: {
+  stream: MediaStream | null
+  isLocal: boolean
+  name: string
+  displayName?: string
+  uid?: string
+  avatarUrl?: string
+  isAudioMuted?: boolean
+  cameraOn?: boolean
+}) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [hasVideo, setHasVideo] = useState(false)
-  
+  const label = displayName ?? cleanDisplayName(name)
+  const initials = getInitials(label)
+  const avatarBackground = resolveAvatarBackground(uid, avatarUrl)
+  const showAvatar = cameraOn === false || !hasVideo
+
   useEffect(() => {
     const el = videoRef.current
     if (el && stream) {
@@ -107,20 +157,39 @@ function VideoBox({ stream, isLocal, name, isAudioMuted }: { stream: MediaStream
   }, [stream, isLocal])
 
   return (
-    <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-2xl bg-slate-900 shadow-sm">
+    <div
+      className={`relative flex h-full w-full items-center justify-center overflow-hidden rounded-2xl shadow-sm transition-colors duration-300 ${
+        showAvatar ? 'bg-slate-100 dark:bg-slate-800' : 'bg-slate-900'
+      }`}
+    >
       {/* Always keep video in DOM (opacity instead of hidden) so it can receive & decode frames */}
       <video
         ref={videoRef}
         autoPlay
         playsInline
-        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${hasVideo ? 'opacity-100' : 'opacity-0'}`}
+        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${
+          showAvatar ? 'opacity-0' : 'opacity-100'
+        }`}
       />
       
-      {!hasVideo && (
-        <div className="flex flex-col items-center justify-center text-slate-500">
-          <div className="mb-2 flex h-20 w-20 items-center justify-center rounded-full bg-slate-700 text-2xl font-bold text-white shadow-inner">
-            {getInitials(name)}
-          </div>
+      {showAvatar && (
+        <div className="flex flex-col items-center justify-center">
+          {avatarUrl && isAvatarImage(avatarUrl) ? (
+            <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full shadow-md ring-4 ring-white/80 dark:ring-slate-700/80">
+              <img
+                src={avatarUrl}
+                alt={label}
+                className="h-full w-full object-cover"
+              />
+            </div>
+          ) : (
+            <div
+              className="flex h-24 w-24 items-center justify-center rounded-full text-3xl font-bold text-white shadow-md ring-4 ring-white/80 dark:ring-slate-700/80"
+              style={{ backgroundColor: avatarBackground }}
+            >
+              {initials}
+            </div>
+          )}
         </div>
       )}
       
@@ -144,6 +213,7 @@ export default function VideoCallPage() {
   
   const [room, setRoom] = useState<Room | null>(null)
   const [participants, setParticipants] = useState<RoomParticipant[]>([])
+  const [videoCallParticipants, setVideoCallParticipants] = useState<RoomParticipant[]>([])
   
   // Mapeo de SocketId a UID para identificar a los remotos
   const [activeSockets, setActiveSockets] = useState<Map<string, string>>(new Map())
@@ -170,8 +240,28 @@ export default function VideoCallPage() {
       createdAt: user.createdAt,
       joinedAt: new Date().toISOString(),
       role: room.createdBy === user.uid ? 'Administrador' : 'Participante'
-    }
+    } as RoomParticipant
   }, [user, room])
+
+  const callParticipants = useMemo(() => {
+    const byUid = new Map<string, RoomParticipant>()
+
+    for (const participant of videoCallParticipants) {
+      byUid.set(participant.uid, participant)
+    }
+
+    if (localParticipant) {
+      byUid.set(localParticipant.uid, localParticipant)
+    }
+
+    for (const uid of activeSockets.values()) {
+      if (byUid.has(uid)) continue
+      const participant = participants.find((p) => p.uid === uid)
+      if (participant) byUid.set(uid, participant)
+    }
+
+    return Array.from(byUid.values())
+  }, [videoCallParticipants, localParticipant, activeSockets, participants])
 
   const handlePeerMetadataReceived = useCallback((socketId: string, uid: string, participant: RoomParticipant) => {
     setActiveSockets(prev => {
@@ -276,6 +366,11 @@ export default function VideoCallPage() {
       }, 100)
     }
 
+    const handleVideoCallStatus = (payload: VideoCallStatus) => {
+      if (payload.roomId !== room.id) return
+      setVideoCallParticipants(payload.participants ?? [])
+    }
+
     // Iniciar stream ANTES de conectar sockets para que los tracks
     // locales estén disponibles cuando lleguen eventos user-joined
     const init = async () => {
@@ -288,12 +383,14 @@ export default function VideoCallPage() {
     socket.on('user-left', handleUserLeft)
     socket.on('chat-history', handleChatHistory)
     socket.on('new-message', handleNewMessage)
+    socket.on('video-call-status', handleVideoCallStatus)
 
     return () => {
       socket.off('user-joined', handleUserJoined)
       socket.off('user-left', handleUserLeft)
       socket.off('chat-history', handleChatHistory)
       socket.off('new-message', handleNewMessage)
+      socket.off('video-call-status', handleVideoCallStatus)
       socket.off('connect')
       socket.emit('leave-video-call', { roomId: room.id })
       socket.emit('leave-room', room.id)
@@ -409,8 +506,12 @@ export default function VideoCallPage() {
               <VideoBox 
                 stream={localStream} 
                 isLocal={true} 
-                name={`Tú (${userFullName})`} 
-                isAudioMuted={!micEnabled} 
+                name={`Tú (${userFullName})`}
+                displayName={userFullName}
+                uid={user?.uid}
+                avatarUrl={user?.avatarUrl}
+                isAudioMuted={!micEnabled}
+                cameraOn={cameraEnabled}
               />
             </div>
             
@@ -438,7 +539,10 @@ export default function VideoCallPage() {
                   <VideoBox 
                     stream={stream} 
                     isLocal={false} 
-                    name={name} 
+                    name={name}
+                    displayName={name}
+                    uid={participant?.uid}
+                    avatarUrl={participant?.avatarUrl}
                   />
                 </div>
               )
@@ -498,13 +602,13 @@ export default function VideoCallPage() {
           {/* Participantes */}
           <div className="border-b border-slate-100 px-4 py-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-slate-900">Participantes</h2>
+              <h2 className="text-sm font-bold text-slate-900">En la llamada</h2>
               <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-                {participants.length} ONLINE
+                {callParticipants.length} EN LLAMADA
               </span>
             </div>
             <div className="mt-2 flex flex-col gap-2">
-              {participants.map((p) => {
+              {callParticipants.map((p) => {
                 const fullName = `${p.firstName} ${p.lastName}`.trim() || p.username
                 const isAdmin = p.uid === room.createdBy || p.role === 'Administrador'
                 return (
