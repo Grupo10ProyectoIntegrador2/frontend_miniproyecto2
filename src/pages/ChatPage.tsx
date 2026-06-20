@@ -36,6 +36,7 @@ import { socket } from '../lib/socket'
 import { joinRoom, getRoomParticipants, updateRoom, deleteRoom } from '../services/rooms.service'
 import DashboardHeader from '../components/DashboardHeader'
 import type { Room, RoomParticipant } from '../types/room.types'
+import type { RoomPresencePayload, VideoCallStatus } from '../types/videoCall.types'
 
 /* ─────────────── Types ─────────────── */
 
@@ -117,6 +118,8 @@ export default function ChatPage() {
 
   const [room, setRoom] = useState<Room | null>(null)
   const [participants, setParticipants] = useState<RoomParticipant[]>([])
+  const [onlineParticipants, setOnlineParticipants] = useState<RoomParticipant[]>([])
+  const [videoCallStatus, setVideoCallStatus] = useState<VideoCallStatus | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(true)
@@ -133,6 +136,8 @@ export default function ChatPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const participantsRef = useRef<RoomParticipant[]>([])
+  participantsRef.current = participants
 
   const handleCopyId = () => {
     if (!room) return
@@ -142,6 +147,27 @@ export default function ChatPage() {
   }
 
   const isOwner = user && room && room.createdBy === user.uid
+  const isVideoCallActive = Boolean(videoCallStatus?.active)
+  const videoCallCount = videoCallStatus?.count ?? 0
+  const onlineCount = onlineParticipants.length
+
+  const upsertOnlineParticipant = (
+    uid: string,
+    participant?: RoomParticipant,
+  ) => {
+    if (!participant) return
+    setOnlineParticipants((prev) => {
+      const exists = prev.some((p) => p.uid === uid)
+      if (exists) {
+        return prev.map((p) => (p.uid === uid ? participant : p))
+      }
+      return [...prev, participant]
+    })
+  }
+
+  const removeOnlineParticipant = (uid: string) => {
+    setOnlineParticipants((prev) => prev.filter((p) => p.uid !== uid))
+  }
 
   const handleEditName = async () => {
     if (!room || !newName.trim() || newName.trim() === room.name) return
@@ -249,6 +275,36 @@ export default function ChatPage() {
       console.error('[Chat]', payload.message)
     }
 
+    const resolveParticipant = (uid: string, participant?: RoomParticipant) =>
+      participant ?? participantsRef.current.find((p) => p.uid === uid)
+
+    const handleUserJoined = (payload: {
+      roomId: string
+      participant?: RoomParticipant
+      uid: string
+    }) => {
+      if (payload.roomId !== room.id) return
+      const resolved = resolveParticipant(payload.uid, payload.participant)
+      if (resolved) upsertOnlineParticipant(payload.uid, resolved)
+    }
+
+    const handleUserLeft = (payload: { uid: string }) => {
+      removeOnlineParticipant(payload.uid)
+    }
+
+    const handleRoomPresence = (payload: RoomPresencePayload) => {
+      if (payload.roomId !== room.id) return
+      const others = payload.users
+        .map((entry) => resolveParticipant(entry.uid, entry.participant))
+        .filter((participant): participant is RoomParticipant => Boolean(participant))
+      setOnlineParticipants([currentParticipant, ...others])
+    }
+
+    const handleVideoCallStatus = (payload: VideoCallStatus) => {
+      if (payload.roomId !== room.id) return
+      setVideoCallStatus(payload)
+    }
+
     const connectWithAuth = async () => {
       const token = await auth.currentUser?.getIdToken()
       if (!token) return
@@ -265,11 +321,19 @@ export default function ChatPage() {
     socket.on('chat-history', handleChatHistory)
     socket.on('new-message', handleNewMessage)
     socket.on('message-error', handleMessageError)
+    socket.on('user-joined', handleUserJoined)
+    socket.on('user-left', handleUserLeft)
+    socket.on('room-presence', handleRoomPresence)
+    socket.on('video-call-status', handleVideoCallStatus)
 
     return () => {
       socket.off('chat-history', handleChatHistory)
       socket.off('new-message', handleNewMessage)
       socket.off('message-error', handleMessageError)
+      socket.off('user-joined', handleUserJoined)
+      socket.off('user-left', handleUserLeft)
+      socket.off('room-presence', handleRoomPresence)
+      socket.off('video-call-status', handleVideoCallStatus)
       socket.off('connect', joinRoomSocket)
       socket.emit('leave-room', room.id)
       socket.disconnect()
@@ -448,10 +512,14 @@ export default function ChatPage() {
             <button
               type="button"
               onClick={() => navigate(`/salas/${roomId}/video`)}
-              className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 py-2.5 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 active:scale-[0.98]"
+              className={`flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl py-2.5 text-[13px] font-semibold text-white shadow-sm transition-colors active:scale-[0.98] ${
+                isVideoCallActive
+                  ? 'bg-emerald-600 hover:bg-emerald-700'
+                  : 'bg-blue-600 hover:bg-blue-700'
+              }`}
             >
               <MessageSquare size={14} />
-              Unirse al Debate
+              {isVideoCallActive ? 'Unirse al Debate' : 'Iniciar Debate'}
             </button>
           </div>
 
@@ -478,19 +546,37 @@ export default function ChatPage() {
         {/* ──────────── MAIN CHAT ──────────── */}
         <main className="flex flex-1 flex-col overflow-hidden bg-slate-50/50 dark:bg-slate-950/50 p-4 gap-4">
           
-          {/* Top Card: Start Video Call */}
-          <div className="flex shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 px-6 py-6 shadow-sm relative min-h-[96px]">
-            <div className="absolute left-6 flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-2xl bg-blue-600 shadow-md">
+          {/* Top Card: Video Call */}
+          <div className={`flex shrink-0 items-center justify-between rounded-2xl border px-6 py-6 shadow-sm relative min-h-[96px] ${
+            isVideoCallActive
+              ? 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-900/40 dark:bg-emerald-950/20'
+              : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900'
+          }`}>
+            <div className={`absolute left-6 flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-2xl shadow-md ${
+              isVideoCallActive ? 'bg-emerald-600' : 'bg-blue-600'
+            }`}>
               <Video size={28} className="text-white" />
             </div>
-            <button
-              type="button"
-              onClick={() => navigate(`/salas/${roomId}/video`)}
-              className="flex items-center gap-2 rounded-xl bg-[#0047E1] px-8 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-800 active:scale-[0.98]"
-            >
-              <Play size={16} className="fill-current" />
-              Iniciar una videollamada
-            </button>
+            <div className="flex flex-1 flex-col items-center gap-2 pl-20 sm:pl-24">
+              {isVideoCallActive && (
+                <div className="flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Videollamada activa · {videoCallCount} {videoCallCount === 1 ? 'participante' : 'participantes'}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => navigate(`/salas/${roomId}/video`)}
+                className={`flex items-center gap-2 rounded-xl px-8 py-3 text-sm font-semibold text-white shadow-sm transition-colors active:scale-[0.98] ${
+                  isVideoCallActive
+                    ? 'bg-emerald-600 hover:bg-emerald-700'
+                    : 'bg-[#0047E1] hover:bg-blue-800'
+                }`}
+              >
+                <Play size={16} className="fill-current" />
+                {isVideoCallActive ? 'Unirse a la videollamada' : 'Iniciar una videollamada'}
+              </button>
+            </div>
           </div>
 
           {/* Chat Container Card */}
@@ -503,7 +589,10 @@ export default function ChatPage() {
                 </div>
                 <div>
                   <h2 className="text-[15px] font-bold text-slate-900 dark:text-white leading-tight">{room.name}</h2>
-                  <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-0.5">{participants.length} participantes activos</p>
+                  <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    {onlineCount} {onlineCount === 1 ? 'participante activo' : 'participantes activos'}
+                    {isVideoCallActive && ` · ${videoCallCount} en videollamada`}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -693,19 +782,19 @@ export default function ChatPage() {
                 Participantes
               </h2>
               <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
-                {participants.length} ONLINE
+                {onlineCount} ONLINE
               </span>
             </div>
           </div>
 
           {/* Participants list */}
           <div className="flex flex-col gap-3 px-4 pb-2">
-            {participants.length === 0 && (
+            {onlineCount === 0 && (
               <p className="text-[12px] text-slate-400 dark:text-slate-500">
-                Sin participantes cargados.
+                Sin participantes conectados.
               </p>
             )}
-            {participants.slice(0, 3).map((p) => {
+            {onlineParticipants.slice(0, 3).map((p) => {
               const fullName =
                 `${p.firstName} ${p.lastName}`.trim() || p.username
               const color = avatarColor(p.uid)
@@ -734,7 +823,7 @@ export default function ChatPage() {
             })}
           </div>
 
-          {participants.length > 3 && (
+          {onlineCount > 3 && (
             <button
               type="button"
               className="mx-4 mb-1 flex cursor-pointer items-center gap-1 text-[13px] font-semibold text-blue-600 transition-colors hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"

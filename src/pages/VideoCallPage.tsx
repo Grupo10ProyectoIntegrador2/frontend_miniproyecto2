@@ -228,9 +228,10 @@ export default function VideoCallPage() {
       
       socket.auth = { token }
       
-      const joinRoomSocket = () => {
+    const joinRoomSocket = () => {
         if (localParticipant) {
           socket.emit('join-room', { roomId: room.id, participant: localParticipant })
+          socket.emit('join-video-call', { roomId: room.id, participant: localParticipant })
         }
       }
 
@@ -294,6 +295,7 @@ export default function VideoCallPage() {
       socket.off('chat-history', handleChatHistory)
       socket.off('new-message', handleNewMessage)
       socket.off('connect')
+      socket.emit('leave-video-call', { roomId: room.id })
       socket.emit('leave-room', room.id)
       socket.disconnect()
       stopLocalStream()
@@ -325,6 +327,9 @@ export default function VideoCallPage() {
   }
 
   const leaveCall = () => {
+    if (room) {
+      socket.emit('leave-video-call', { roomId: room.id })
+    }
     navigate(`/salas/${roomId}/chat`)
   }
 
