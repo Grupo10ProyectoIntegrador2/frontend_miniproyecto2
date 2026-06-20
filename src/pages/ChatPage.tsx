@@ -14,13 +14,10 @@ import {
   Mic,
   HelpCircle,
   LogOut,
-  Calendar,
-  ClipboardList,
   Smile,
   PlusCircle,
   Bell,
   Settings,
-  ChevronRight,
   Video,
   Copy,
   Edit2,
@@ -788,13 +785,13 @@ export default function ChatPage() {
           </div>
 
           {/* Participants list */}
-          <div className="flex flex-col gap-3 px-4 pb-2">
+          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 pb-3">
             {onlineCount === 0 && (
               <p className="text-[12px] text-slate-400 dark:text-slate-500">
                 Sin participantes conectados.
               </p>
             )}
-            {onlineParticipants.slice(0, 3).map((p) => {
+            {onlineParticipants.map((p) => {
               const fullName =
                 `${p.firstName} ${p.lastName}`.trim() || p.username
               const color = avatarColor(p.uid)
@@ -823,97 +820,17 @@ export default function ChatPage() {
             })}
           </div>
 
-          {onlineCount > 3 && (
-            <button
-              type="button"
-              className="mx-4 mb-1 flex cursor-pointer items-center gap-1 text-[13px] font-semibold text-blue-600 transition-colors hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-            >
-              Ver todos los participantes
-              <ChevronRight size={14} />
-            </button>
-          )}
+          <div className="mx-4 h-px shrink-0 bg-slate-100 dark:bg-slate-800" />
 
-          {/* Divider */}
-          <div className="mx-4 my-3 h-px bg-slate-100 dark:bg-slate-800" />
-
-          {/* Info rápida */}
-          <div className="flex flex-1 flex-col overflow-y-auto px-4 pb-4">
-            <h3 className="mb-3 text-[13px] font-bold text-slate-900 dark:text-white">
-              Info rápida
-            </h3>
-            <div className="flex flex-col gap-2">
-              {/* Próximo Examen */}
-              <div className="flex items-start gap-2.5 rounded-xl bg-slate-50 p-3 dark:bg-slate-950/60">
-                <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/40">
-                  <Calendar size={13} className="text-blue-600 dark:text-blue-400" />
-                </div>
-                <div>
-                  <p className="text-[12px] font-semibold text-slate-700 dark:text-slate-300">
-                    Próximo Examen
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">
-                    Sin fecha definida aún
-                  </p>
-                </div>
-              </div>
-
-              {/* Tarea Pendiente */}
-              <div className="flex items-start gap-2.5 rounded-xl bg-slate-50 p-3 dark:bg-slate-950/60">
-                <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/40">
-                  <ClipboardList size={13} className="text-blue-600 dark:text-blue-400" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-[12px] font-semibold text-slate-700 dark:text-slate-300">
-                    Tarea Pendiente
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">
-                    Informe de Laboratorio
-                  </p>
-                  <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
-                    <div
-                      className="h-full rounded-full bg-blue-500 transition-all"
-                      style={{ width: '65%' }}
-                    />
-                  </div>
-                  <p className="mt-0.5 text-[10px] text-slate-400 dark:text-slate-500">
-                    65% completado
-                  </p>
-                </div>
-              </div>
-
-              {/* Nota de la sesión */}
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/40 dark:bg-amber-950/20">
-                <p className="text-[12px] font-semibold text-amber-800 dark:text-amber-300">
-                  Nota de la sesión
-                </p>
-                <p className="mt-1 text-[11px] italic leading-relaxed text-amber-700 dark:text-amber-400/90">
-                  "Mensajes en tiempo real. Historial guardado durante la
-                  sesión. Máx. 2000 caracteres por mensaje."
-                </p>
-              </div>
+          <div className="shrink-0 px-4 py-4">
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/40 dark:bg-amber-950/20">
+              <p className="text-[12px] font-semibold text-amber-800 dark:text-amber-300">
+                Nota de la sesión
+              </p>
+              <p className="mt-1 text-[11px] italic leading-relaxed text-amber-700 dark:text-amber-400/90">
+                Mensajes en tiempo real. Historial guardado durante la sesión. Máx. 2000 caracteres por mensaje.
+              </p>
             </div>
-          </div>
-
-          {/* Bottom quick actions */}
-          <div className="flex shrink-0 items-center justify-around border-t border-slate-100 dark:border-slate-800 py-3">
-            <button
-              type="button"
-              className="flex cursor-pointer flex-col items-center gap-1 px-4 text-slate-500 transition-colors hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
-            >
-              <div className="rounded-lg bg-slate-100 p-2 transition-colors hover:bg-blue-50 dark:bg-slate-800 dark:hover:bg-blue-950/40">
-                <FolderOpen size={16} />
-              </div>
-              <span className="text-[10px] font-medium">Compartir</span>
-            </button>
-            <button
-              type="button"
-              className="flex cursor-pointer flex-col items-center gap-1 px-4 text-slate-500 transition-colors hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
-            >
-              <div className="rounded-lg bg-slate-100 p-2 transition-colors hover:bg-blue-50 dark:bg-slate-800 dark:hover:bg-blue-950/40">
-                <Video size={16} />
-              </div>
-              <span className="text-[10px] font-medium">Cámara</span>
-            </button>
           </div>
         </aside>
       </div>
