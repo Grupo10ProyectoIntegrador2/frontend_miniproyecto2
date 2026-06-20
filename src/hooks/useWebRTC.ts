@@ -162,6 +162,10 @@ export function useWebRTC(
         msg = 'Permiso denegado para acceder a la cámara y/o micrófono. Por favor, actívalos en la configuración de tu navegador.'
       } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
         msg = 'No se encontró ninguna cámara o micrófono conectado.'
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        msg = 'La cámara o micrófono está siendo usado por otra aplicación. Cierra otras apps que puedan estar usándolos (Teams, Zoom, Discord, etc.) e intenta de nuevo.'
+      } else if (error.name === 'OverconstrainedError') {
+        msg = 'La cámara no soporta la configuración solicitada. Intenta con otro dispositivo.'
       }
       setPermissionError(msg)
       return null
@@ -210,6 +214,10 @@ export function useWebRTC(
       localStreamRef.current.getTracks().forEach((track) => {
         pc.addTrack(track, localStreamRef.current!)
       })
+    } else {
+      // Even without local media, add transceivers so we can RECEIVE remote tracks
+      pc.addTransceiver('audio', { direction: 'recvonly' })
+      pc.addTransceiver('video', { direction: 'recvonly' })
     }
 
     pc.onnegotiationneeded = async () => {

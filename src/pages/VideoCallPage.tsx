@@ -380,11 +380,19 @@ export default function VideoCallPage() {
       setVideoCallParticipants(payload.participants ?? [])
     }
 
-    // Iniciar stream ANTES de conectar sockets para que los tracks
-    // locales estén disponibles cuando lleguen eventos user-joined
+    // Iniciar stream local Y sockets en paralelo.
+    // Si getUserMedia falla (cámara en uso, permisos denegados, etc.),
+    // los sockets se conectan de todos modos para recibir video/audio remoto.
     const init = async () => {
-      await startLocalStream()
-      await initSocket()
+      // Start both in parallel – socket connection should NOT depend on media access
+      const [stream] = await Promise.all([
+        startLocalStream(),
+        initSocket()
+      ])
+      // If stream failed, log but don't block – user can still receive remote streams
+      if (!stream) {
+        console.warn('[VideoCall] Local media not available – joining as receive-only')
+      }
     }
     void init()
 
