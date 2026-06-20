@@ -12,7 +12,8 @@ export function useWebRTC(
   roomId: string,
   userId: string,
   localParticipant?: any,
-  onPeerMetadataReceived?: (socketId: string, uid: string, participant: any) => void
+  onPeerMetadataReceived?: (socketId: string, uid: string, participant: any) => void,
+  onPeerMediaStatusReceived?: (socketId: string, uid: string, isAudioMuted: boolean, cameraOn: boolean) => void
 ) {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null)
   const [permissionError, setPermissionError] = useState<string | null>(null)
@@ -37,6 +38,9 @@ export function useWebRTC(
 
   const onPeerMetadataReceivedRef = useRef(onPeerMetadataReceived)
   onPeerMetadataReceivedRef.current = onPeerMetadataReceived
+
+  const onPeerMediaStatusReceivedRef = useRef(onPeerMediaStatusReceived)
+  onPeerMediaStatusReceivedRef.current = onPeerMediaStatusReceived
 
 
   const isPolite = useCallback((targetSocketId: string): boolean => {
@@ -67,17 +71,32 @@ export function useWebRTC(
       const participant = localParticipantRef.current
       if (participant) {
         dc.send(JSON.stringify({
+          type: 'metadata',
           uid: userIdRef.current,
           participant
         }))
+        if (localStreamRef.current) {
+          const audioTrack = localStreamRef.current.getAudioTracks()[0]
+          const videoTrack = localStreamRef.current.getVideoTracks()[0]
+          dc.send(JSON.stringify({
+            type: 'media-status',
+            uid: userIdRef.current,
+            isAudioMuted: audioTrack ? !audioTrack.enabled : false,
+            cameraOn: videoTrack ? videoTrack.enabled : false
+          }))
+        }
       }
     }
 
     dc.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data)
-        console.log(`[DataChannel] Metadatos recibidos de ${targetSocketId}:`, data)
-        onPeerMetadataReceivedRef.current?.(targetSocketId, data.uid, data.participant)
+        if (data.type === 'media-status') {
+          onPeerMediaStatusReceivedRef.current?.(targetSocketId, data.uid, data.isAudioMuted, data.cameraOn)
+        } else {
+          console.log(`[DataChannel] Metadatos recibidos de ${targetSocketId}:`, data)
+          onPeerMetadataReceivedRef.current?.(targetSocketId, data.uid, data.participant || data)
+        }
       } catch (error) {
         console.error('[DataChannel] Error procesando mensaje de metadatos:', error)
       }
@@ -97,9 +116,20 @@ export function useWebRTC(
       const participant = localParticipantRef.current
       if (participant) {
         dc.send(JSON.stringify({
+          type: 'metadata',
           uid: userIdRef.current,
           participant
         }))
+        if (localStreamRef.current) {
+          const audioTrack = localStreamRef.current.getAudioTracks()[0]
+          const videoTrack = localStreamRef.current.getVideoTracks()[0]
+          dc.send(JSON.stringify({
+            type: 'media-status',
+            uid: userIdRef.current,
+            isAudioMuted: audioTrack ? !audioTrack.enabled : false,
+            cameraOn: videoTrack ? videoTrack.enabled : false
+          }))
+        }
       }
     }
   }, []) // No deps needed – reads from refs
@@ -380,11 +410,34 @@ export function useWebRTC(
     }
   }, [stopLocalStream])
 
+  const broadcastMediaStatus = useCallback(() => {
+    if (localStreamRef.current) {
+      const audioTrack = localStreamRef.current.getAudioTracks()[0]
+      const videoTrack = localStreamRef.current.getVideoTracks()[0]
+      const isAudioMuted = audioTrack ? !audioTrack.enabled : false
+      const cameraOn = videoTrack ? videoTrack.enabled : false
+
+      const message = JSON.stringify({
+        type: 'media-status',
+        uid: userIdRef.current,
+        isAudioMuted,
+        cameraOn
+      })
+
+      dataChannels.current.forEach(dc => {
+        if (dc.readyState === 'open') {
+          dc.send(message)
+        }
+      })
+    }
+  }, [])
+
   const toggleMic = () => {
     if (localStreamRef.current) {
       const audioTrack = localStreamRef.current.getAudioTracks()[0]
       if (audioTrack) {
         audioTrack.enabled = !audioTrack.enabled
+        broadcastMediaStatus()
         return audioTrack.enabled
       }
     }
@@ -396,6 +449,7 @@ export function useWebRTC(
       const videoTrack = localStreamRef.current.getVideoTracks()[0]
       if (videoTrack) {
         videoTrack.enabled = !videoTrack.enabled
+        broadcastMediaStatus()
         return videoTrack.enabled
       }
     }

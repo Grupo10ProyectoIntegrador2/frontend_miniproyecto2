@@ -14,13 +14,10 @@ import {
   Mic,
   HelpCircle,
   LogOut,
-  Calendar,
-  ClipboardList,
   Smile,
   PlusCircle,
   Bell,
   Settings,
-  ChevronRight,
   Video,
   Copy,
   Edit2,
@@ -36,6 +33,7 @@ import { socket } from '../lib/socket'
 import { joinRoom, getRoomParticipants, updateRoom, deleteRoom } from '../services/rooms.service'
 import DashboardHeader from '../components/DashboardHeader'
 import type { Room, RoomParticipant } from '../types/room.types'
+import type { RoomPresencePayload, VideoCallStatus } from '../types/videoCall.types'
 
 /* ─────────────── Types ─────────────── */
 
@@ -117,6 +115,8 @@ export default function ChatPage() {
 
   const [room, setRoom] = useState<Room | null>(null)
   const [participants, setParticipants] = useState<RoomParticipant[]>([])
+  const [onlineParticipants, setOnlineParticipants] = useState<RoomParticipant[]>([])
+  const [videoCallStatus, setVideoCallStatus] = useState<VideoCallStatus | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(true)
@@ -133,6 +133,8 @@ export default function ChatPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const participantsRef = useRef<RoomParticipant[]>([])
+  participantsRef.current = participants
 
   const handleCopyId = () => {
     if (!room) return
@@ -142,6 +144,27 @@ export default function ChatPage() {
   }
 
   const isOwner = user && room && room.createdBy === user.uid
+  const isVideoCallActive = Boolean(videoCallStatus?.active)
+  const videoCallCount = videoCallStatus?.count ?? 0
+  const onlineCount = onlineParticipants.length
+
+  const upsertOnlineParticipant = (
+    uid: string,
+    participant?: RoomParticipant,
+  ) => {
+    if (!participant) return
+    setOnlineParticipants((prev) => {
+      const exists = prev.some((p) => p.uid === uid)
+      if (exists) {
+        return prev.map((p) => (p.uid === uid ? participant : p))
+      }
+      return [...prev, participant]
+    })
+  }
+
+  const removeOnlineParticipant = (uid: string) => {
+    setOnlineParticipants((prev) => prev.filter((p) => p.uid !== uid))
+  }
 
   const handleEditName = async () => {
     if (!room || !newName.trim() || newName.trim() === room.name) return
@@ -249,6 +272,36 @@ export default function ChatPage() {
       console.error('[Chat]', payload.message)
     }
 
+    const resolveParticipant = (uid: string, participant?: RoomParticipant) =>
+      participant ?? participantsRef.current.find((p) => p.uid === uid)
+
+    const handleUserJoined = (payload: {
+      roomId: string
+      participant?: RoomParticipant
+      uid: string
+    }) => {
+      if (payload.roomId !== room.id) return
+      const resolved = resolveParticipant(payload.uid, payload.participant)
+      if (resolved) upsertOnlineParticipant(payload.uid, resolved)
+    }
+
+    const handleUserLeft = (payload: { uid: string }) => {
+      removeOnlineParticipant(payload.uid)
+    }
+
+    const handleRoomPresence = (payload: RoomPresencePayload) => {
+      if (payload.roomId !== room.id) return
+      const others = payload.users
+        .map((entry) => resolveParticipant(entry.uid, entry.participant))
+        .filter((participant): participant is RoomParticipant => Boolean(participant))
+      setOnlineParticipants([currentParticipant, ...others])
+    }
+
+    const handleVideoCallStatus = (payload: VideoCallStatus) => {
+      if (payload.roomId !== room.id) return
+      setVideoCallStatus(payload)
+    }
+
     const connectWithAuth = async () => {
       const token = await auth.currentUser?.getIdToken()
       if (!token) return
@@ -265,11 +318,19 @@ export default function ChatPage() {
     socket.on('chat-history', handleChatHistory)
     socket.on('new-message', handleNewMessage)
     socket.on('message-error', handleMessageError)
+    socket.on('user-joined', handleUserJoined)
+    socket.on('user-left', handleUserLeft)
+    socket.on('room-presence', handleRoomPresence)
+    socket.on('video-call-status', handleVideoCallStatus)
 
     return () => {
       socket.off('chat-history', handleChatHistory)
       socket.off('new-message', handleNewMessage)
       socket.off('message-error', handleMessageError)
+      socket.off('user-joined', handleUserJoined)
+      socket.off('user-left', handleUserLeft)
+      socket.off('room-presence', handleRoomPresence)
+      socket.off('video-call-status', handleVideoCallStatus)
       socket.off('connect', joinRoomSocket)
       socket.emit('leave-room', room.id)
       socket.disconnect()
@@ -302,9 +363,9 @@ export default function ChatPage() {
   /* ── Loading state ── */
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-50">
+      <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
         <Loader2 className="mr-2 h-6 w-6 animate-spin text-blue-600" />
-        <span className="text-sm text-slate-500">Abriendo chat...</span>
+        <span className="text-sm text-slate-500 dark:text-slate-400">Abriendo chat...</span>
       </div>
     )
   }
@@ -312,16 +373,16 @@ export default function ChatPage() {
   /* ── Error state ── */
   if (error || !room) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-slate-50 p-4">
+      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-slate-50 dark:bg-slate-950 p-4">
         <AlertCircle className="h-10 w-10 text-red-500" />
-        <h1 className="text-xl font-bold text-slate-900">
+        <h1 className="text-xl font-bold text-slate-900 dark:text-white">
           No se pudo abrir el chat
         </h1>
-        <p className="text-sm text-slate-500">{error || 'Sala no encontrada.'}</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">{error || 'Sala no encontrada.'}</p>
         <button
           type="button"
           onClick={() => navigate('/dashboard')}
-          className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+          className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
         >
           <ArrowLeft size={15} />
           Volver al dashboard
@@ -345,7 +406,7 @@ export default function ChatPage() {
   /* ── Main render ── */
   return (
     <div
-      className="flex h-screen flex-col overflow-hidden bg-slate-50"
+      className="flex h-screen flex-col overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-200"
       style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
     >
       {/* ════════════════════ TOP HEADER ════════════════════ */}
@@ -355,7 +416,7 @@ export default function ChatPage() {
       <div className="flex flex-1 overflow-hidden">
 
         {/* ──────────── LEFT SIDEBAR ──────────── */}
-        <aside className="flex w-52 shrink-0 flex-col border-r border-slate-200 bg-white">
+        <aside className="flex w-52 shrink-0 flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
           {/* Room card */}
           <div className="m-3 mb-2">
             <div className="rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 p-3 text-white shadow-sm">
@@ -374,23 +435,23 @@ export default function ChatPage() {
           </div>
 
           {/* GESTIÓN DE SALA */}
-          <div className="mx-3 mb-4 rounded-xl border border-slate-100 bg-slate-50 p-4 shadow-sm">
+          <div className="mx-3 mb-4 rounded-xl border border-slate-100 bg-slate-50 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/60">
             <div className="mb-3 flex items-center justify-between">
-              <span className="text-[10px] font-bold tracking-wider text-slate-500">GESTIÓN DE SALA</span>
+              <span className="text-[10px] font-bold tracking-wider text-slate-500 dark:text-slate-400">GESTIÓN DE SALA</span>
               {isOwner && (
-                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold text-emerald-700">
+                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
                   PROPIETARIO
                 </span>
               )}
             </div>
 
             <div className="mb-4 flex items-center justify-between">
-              <span className="text-sm font-bold text-slate-900 truncate max-w-[140px]">{room.name}</span>
+              <span className="text-sm font-bold text-slate-900 dark:text-white truncate max-w-[140px]">{room.name}</span>
               {isOwner && (
                 <div className="flex items-center gap-1">
                   <button 
                     onClick={() => { setNewName(room.name); setEditingName(true); }}
-                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700 transition-colors"
+                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700 transition-colors dark:hover:bg-slate-800 dark:hover:text-slate-200"
                     title="Editar nombre"
                   >
                     <Edit2 size={14} />
@@ -398,7 +459,7 @@ export default function ChatPage() {
                   <button 
                     onClick={handleDeleteRoom}
                     disabled={deleting}
-                    className="rounded-lg p-1.5 text-slate-400 hover:bg-red-100 hover:text-red-600 transition-colors disabled:opacity-50"
+                    className="rounded-lg p-1.5 text-slate-400 hover:bg-red-100 hover:text-red-600 transition-colors disabled:opacity-50 dark:hover:bg-red-950/40 dark:hover:text-red-400"
                     title="Eliminar sala"
                   >
                     <Trash2 size={14} />
@@ -408,9 +469,9 @@ export default function ChatPage() {
             </div>
 
             <div>
-              <span className="text-[10px] font-bold tracking-wider text-slate-500">ID DE SALA</span>
+              <span className="text-[10px] font-bold tracking-wider text-slate-500 dark:text-slate-400">ID DE SALA</span>
               <div className="mt-1 flex items-center gap-2">
-                <span className="text-sm font-bold text-blue-600 truncate max-w-[120px]">#{room.id.substring(0, 8).toUpperCase()}</span>
+                <span className="text-sm font-bold text-blue-600 dark:text-blue-400 truncate max-w-[120px]">#{room.id.substring(0, 8).toUpperCase()}</span>
                 <button 
                   onClick={handleCopyId}
                   className="text-blue-600 hover:text-blue-800 transition-colors"
@@ -432,7 +493,7 @@ export default function ChatPage() {
                 className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[13px] transition-all duration-150 ${
                   activeNav === id
                     ? 'bg-blue-600 font-semibold text-white shadow-sm'
-                    : 'font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-800'
+                    : 'font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
                 }`}
               >
                 <Icon size={15} />
@@ -448,18 +509,22 @@ export default function ChatPage() {
             <button
               type="button"
               onClick={() => navigate(`/salas/${roomId}/video`)}
-              className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 py-2.5 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 active:scale-[0.98]"
+              className={`flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl py-2.5 text-[13px] font-semibold text-white shadow-sm transition-colors active:scale-[0.98] ${
+                isVideoCallActive
+                  ? 'bg-emerald-600 hover:bg-emerald-700'
+                  : 'bg-blue-600 hover:bg-blue-700'
+              }`}
             >
               <MessageSquare size={14} />
-              Unirse al Debate
+              {isVideoCallActive ? 'Unirse al Debate' : 'Iniciar Debate'}
             </button>
           </div>
 
           {/* Bottom links */}
-          <div className="flex flex-col gap-0.5 border-t border-slate-100 px-3 py-3">
+          <div className="flex flex-col gap-0.5 border-t border-slate-100 dark:border-slate-800 px-3 py-3">
             <button
               type="button"
-              className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+              className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
             >
               <HelpCircle size={14} />
               Soporte
@@ -467,7 +532,7 @@ export default function ChatPage() {
             <button
               type="button"
               onClick={() => navigate('/dashboard')}
-              className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] text-red-500 transition-colors hover:bg-red-50 hover:text-red-600"
+              className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] text-red-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30 dark:hover:text-red-400"
             >
               <LogOut size={14} />
               Salir
@@ -476,41 +541,62 @@ export default function ChatPage() {
         </aside>
 
         {/* ──────────── MAIN CHAT ──────────── */}
-        <main className="flex flex-1 flex-col overflow-hidden bg-slate-50/50 p-4 gap-4">
+        <main className="flex flex-1 flex-col overflow-hidden bg-slate-50/50 dark:bg-slate-950/50 p-4 gap-4">
           
-          {/* Top Card: Start Video Call */}
-          <div className="flex shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 py-6 shadow-sm relative min-h-[96px]">
-            <div className="absolute left-6 flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-2xl bg-blue-600 shadow-md">
+          {/* Top Card: Video Call */}
+          <div className={`flex shrink-0 items-center justify-between rounded-2xl border px-6 py-6 shadow-sm relative min-h-[96px] ${
+            isVideoCallActive
+              ? 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-900/40 dark:bg-emerald-950/20'
+              : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900'
+          }`}>
+            <div className={`absolute left-6 flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-2xl shadow-md ${
+              isVideoCallActive ? 'bg-emerald-600' : 'bg-blue-600'
+            }`}>
               <Video size={28} className="text-white" />
             </div>
-            <button
-              type="button"
-              onClick={() => navigate(`/salas/${roomId}/video`)}
-              className="flex items-center gap-2 rounded-xl bg-[#0047E1] px-8 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-800 active:scale-[0.98]"
-            >
-              <Play size={16} className="fill-current" />
-              Iniciar una videollamada
-            </button>
+            <div className="flex flex-1 flex-col items-center gap-2 pl-20 sm:pl-24">
+              {isVideoCallActive && (
+                <div className="flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Videollamada activa · {videoCallCount} {videoCallCount === 1 ? 'participante' : 'participantes'}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => navigate(`/salas/${roomId}/video`)}
+                className={`flex items-center gap-2 rounded-xl px-8 py-3 text-sm font-semibold text-white shadow-sm transition-colors active:scale-[0.98] ${
+                  isVideoCallActive
+                    ? 'bg-emerald-600 hover:bg-emerald-700'
+                    : 'bg-[#0047E1] hover:bg-blue-800'
+                }`}
+              >
+                <Play size={16} className="fill-current" />
+                {isVideoCallActive ? 'Unirse a la videollamada' : 'Iniciar una videollamada'}
+              </button>
+            </div>
           </div>
 
           {/* Chat Container Card */}
-          <div className="flex flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm">
             {/* Header inside chat container */}
-            <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-6 py-4">
+            <div className="flex shrink-0 items-center justify-between border-b border-slate-100 dark:border-slate-800 px-6 py-4">
               <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50/80">
-                  <BookOpen size={22} className="text-blue-600" />
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50/80 dark:bg-blue-950/40">
+                  <BookOpen size={22} className="text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                  <h2 className="text-[15px] font-bold text-slate-900 leading-tight">{room.name}</h2>
-                  <p className="text-[13px] text-slate-500 mt-0.5">{participants.length} participantes activos</p>
+                  <h2 className="text-[15px] font-bold text-slate-900 dark:text-white leading-tight">{room.name}</h2>
+                  <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    {onlineCount} {onlineCount === 1 ? 'participante activo' : 'participantes activos'}
+                    {isVideoCallActive && ` · ${videoCallCount} en videollamada`}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button className="rounded-full p-2.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors">
+                <button className="rounded-full p-2.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors dark:hover:bg-slate-800 dark:hover:text-slate-200">
                   <Search size={20} />
                 </button>
-                <button className="rounded-full p-2.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors">
+                <button className="rounded-full p-2.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors dark:hover:bg-slate-800 dark:hover:text-slate-200">
                   <MoreVertical size={20} />
                 </button>
               </div>
@@ -523,7 +609,7 @@ export default function ChatPage() {
           >
             {messages.length === 0 ? (
               <div className="flex h-full items-center justify-center">
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-slate-400 dark:text-slate-500">
                   Aún no hay mensajes. ¡Sé el primero en escribir!
                 </p>
               </div>
@@ -550,11 +636,11 @@ export default function ChatPage() {
                       {/* Date separator */}
                       {showDateSep && (
                         <div className="my-5 flex items-center gap-3">
-                          <div className="h-px flex-1 bg-slate-200" />
-                          <span className="text-[11px] font-medium text-slate-400">
+                          <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+                          <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
                             {formatDateSep(msg.createdAt)}
                           </span>
-                          <div className="h-px flex-1 bg-slate-200" />
+                          <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
                         </div>
                       )}
 
@@ -584,32 +670,32 @@ export default function ChatPage() {
                           {/* Meta row */}
                           {showSenderInfo && !isOwn && (
                             <div className="mb-1 flex items-center gap-1.5 px-0.5">
-                              <span className="text-[13px] font-semibold text-slate-700">
+                              <span className="text-[13px] font-semibold text-slate-700 dark:text-slate-200">
                                 {msg.senderName}
                               </span>
                               {participantRole === 'Administrador' && (
-                                <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">
+                                <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-950/50 dark:text-blue-300">
                                   ADMINISTRADOR
                                 </span>
                               )}
-                              <span className="text-[11px] text-slate-400">
+                              <span className="text-[11px] text-slate-400 dark:text-slate-500">
                                 {formatTime(msg.createdAt)}
                               </span>
                             </div>
                           )}
                           {isOwn && (
                             <div className="mb-1 flex items-center gap-1.5 px-0.5">
-                              <span className="text-[11px] text-slate-400">
+                              <span className="text-[11px] text-slate-400 dark:text-slate-500">
                                 {formatTime(msg.createdAt)}
                               </span>
-                              <span className="text-[12px] font-semibold text-slate-500">
+                              <span className="text-[12px] font-semibold text-slate-500 dark:text-slate-400">
                                 Tú
                               </span>
                             </div>
                           )}
                           {!showSenderInfo && !isOwn && (
                             <div className="mb-1 px-0.5">
-                              <span className="text-[11px] text-slate-400">
+                              <span className="text-[11px] text-slate-400 dark:text-slate-500">
                                 {formatTime(msg.createdAt)}
                               </span>
                             </div>
@@ -620,7 +706,7 @@ export default function ChatPage() {
                             className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed shadow-sm ${
                               isOwn
                                 ? 'rounded-tr-sm bg-blue-600 text-white'
-                                : 'rounded-tl-sm border border-slate-100 bg-white text-slate-800'
+                                : 'rounded-tl-sm border border-slate-100 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100'
                             }`}
                           >
                             {msg.content}
@@ -636,12 +722,12 @@ export default function ChatPage() {
           </div>
 
           {/* ── Message input ── */}
-          <div className="shrink-0 border-t border-slate-200 bg-white px-5 py-3">
+          <div className="shrink-0 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-5 py-3">
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 aria-label="Adjuntar archivo"
-                className="shrink-0 cursor-pointer rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+                className="shrink-0 cursor-pointer rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
               >
                 <PlusCircle size={18} />
               </button>
@@ -655,13 +741,13 @@ export default function ChatPage() {
                 onKeyDown={handleKeyDown}
                 placeholder="Escribe un mensaje aquí..."
                 maxLength={2000}
-                className="flex-1 rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-4 pr-4 text-sm text-slate-900 placeholder-slate-400 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                className="flex-1 rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-4 pr-4 text-sm text-slate-900 placeholder-slate-400 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder-slate-500 dark:focus:border-blue-500 dark:focus:ring-blue-950/50"
               />
 
               <button
                 type="button"
                 aria-label="Emoji"
-                className="shrink-0 cursor-pointer rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+                className="shrink-0 cursor-pointer rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
               >
                 <Smile size={18} />
               </button>
@@ -685,27 +771,27 @@ export default function ChatPage() {
         </main>
 
         {/* ──────────── RIGHT SIDEBAR ──────────── */}
-        <aside className="flex w-72 shrink-0 flex-col border-l border-slate-200 bg-white">
+        <aside className="flex w-72 shrink-0 flex-col border-l border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
           {/* Participants header */}
           <div className="px-4 pb-3 pt-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-[15px] font-bold text-slate-900">
+              <h2 className="text-[15px] font-bold text-slate-900 dark:text-white">
                 Participantes
               </h2>
-              <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">
-                {participants.length} ONLINE
+              <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+                {onlineCount} ONLINE
               </span>
             </div>
           </div>
 
           {/* Participants list */}
-          <div className="flex flex-col gap-3 px-4 pb-2">
-            {participants.length === 0 && (
-              <p className="text-[12px] text-slate-400">
-                Sin participantes cargados.
+          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 pb-3">
+            {onlineCount === 0 && (
+              <p className="text-[12px] text-slate-400 dark:text-slate-500">
+                Sin participantes conectados.
               </p>
             )}
-            {participants.slice(0, 3).map((p) => {
+            {onlineParticipants.map((p) => {
               const fullName =
                 `${p.firstName} ${p.lastName}`.trim() || p.username
               const color = avatarColor(p.uid)
@@ -718,14 +804,14 @@ export default function ChatPage() {
                     {getInitials(fullName)}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-semibold text-slate-800">
+                    <p className="truncate text-[13px] font-semibold text-slate-800 dark:text-slate-200">
                       {fullName}
                     </p>
                   </div>
                   <button
                     type="button"
                     aria-label="Micrófono"
-                    className="shrink-0 cursor-pointer text-slate-300 transition-colors hover:text-slate-500"
+                    className="shrink-0 cursor-pointer text-slate-300 transition-colors hover:text-slate-500 dark:text-slate-600 dark:hover:text-slate-400"
                   >
                     <Mic size={13} />
                   </button>
@@ -734,97 +820,17 @@ export default function ChatPage() {
             })}
           </div>
 
-          {participants.length > 3 && (
-            <button
-              type="button"
-              className="mx-4 mb-1 flex cursor-pointer items-center gap-1 text-[13px] font-semibold text-blue-600 transition-colors hover:text-blue-700"
-            >
-              Ver todos los participantes
-              <ChevronRight size={14} />
-            </button>
-          )}
+          <div className="mx-4 h-px shrink-0 bg-slate-100 dark:bg-slate-800" />
 
-          {/* Divider */}
-          <div className="mx-4 my-3 h-px bg-slate-100" />
-
-          {/* Info rápida */}
-          <div className="flex flex-1 flex-col overflow-y-auto px-4 pb-4">
-            <h3 className="mb-3 text-[13px] font-bold text-slate-900">
-              Info rápida
-            </h3>
-            <div className="flex flex-col gap-2">
-              {/* Próximo Examen */}
-              <div className="flex items-start gap-2.5 rounded-xl bg-slate-50 p-3">
-                <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-50">
-                  <Calendar size={13} className="text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-[12px] font-semibold text-slate-700">
-                    Próximo Examen
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-slate-400">
-                    Sin fecha definida aún
-                  </p>
-                </div>
-              </div>
-
-              {/* Tarea Pendiente */}
-              <div className="flex items-start gap-2.5 rounded-xl bg-slate-50 p-3">
-                <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-50">
-                  <ClipboardList size={13} className="text-blue-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-[12px] font-semibold text-slate-700">
-                    Tarea Pendiente
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-slate-400">
-                    Informe de Laboratorio
-                  </p>
-                  <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-200">
-                    <div
-                      className="h-full rounded-full bg-blue-500 transition-all"
-                      style={{ width: '65%' }}
-                    />
-                  </div>
-                  <p className="mt-0.5 text-[10px] text-slate-400">
-                    65% completado
-                  </p>
-                </div>
-              </div>
-
-              {/* Nota de la sesión */}
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
-                <p className="text-[12px] font-semibold text-amber-800">
-                  Nota de la sesión
-                </p>
-                <p className="mt-1 text-[11px] italic leading-relaxed text-amber-700">
-                  "Mensajes en tiempo real. Historial guardado durante la
-                  sesión. Máx. 2000 caracteres por mensaje."
-                </p>
-              </div>
+          <div className="shrink-0 px-4 py-4">
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/40 dark:bg-amber-950/20">
+              <p className="text-[12px] font-semibold text-amber-800 dark:text-amber-300">
+                Nota de la sesión
+              </p>
+              <p className="mt-1 text-[11px] italic leading-relaxed text-amber-700 dark:text-amber-400/90">
+                Mensajes en tiempo real. Historial guardado durante la sesión. Máx. 2000 caracteres por mensaje.
+              </p>
             </div>
-          </div>
-
-          {/* Bottom quick actions */}
-          <div className="flex shrink-0 items-center justify-around border-t border-slate-100 py-3">
-            <button
-              type="button"
-              className="flex cursor-pointer flex-col items-center gap-1 px-4 text-slate-500 transition-colors hover:text-blue-600"
-            >
-              <div className="rounded-lg bg-slate-100 p-2 transition-colors hover:bg-blue-50">
-                <FolderOpen size={16} />
-              </div>
-              <span className="text-[10px] font-medium">Compartir</span>
-            </button>
-            <button
-              type="button"
-              className="flex cursor-pointer flex-col items-center gap-1 px-4 text-slate-500 transition-colors hover:text-blue-600"
-            >
-              <div className="rounded-lg bg-slate-100 p-2 transition-colors hover:bg-blue-50">
-                <Video size={16} />
-              </div>
-              <span className="text-[10px] font-medium">Cámara</span>
-            </button>
           </div>
         </aside>
       </div>
@@ -839,7 +845,7 @@ export default function ChatPage() {
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               maxLength={50}
-              className="mt-4 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                className="mt-4 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:ring-blue-950/50"
               autoFocus
             />
             <div className="mt-5 flex justify-end gap-3">
