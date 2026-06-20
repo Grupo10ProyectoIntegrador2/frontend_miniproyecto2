@@ -217,6 +217,7 @@ export default function VideoCallPage() {
   
   // Mapeo de SocketId a UID para identificar a los remotos
   const [activeSockets, setActiveSockets] = useState<Map<string, string>>(new Map())
+  const [remoteMediaStatus, setRemoteMediaStatus] = useState<Record<string, { isAudioMuted: boolean, cameraOn: boolean }>>({})
   
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [newMessage, setNewMessage] = useState('')
@@ -275,11 +276,19 @@ export default function VideoCallPage() {
     })
   }, [])
 
+  const handlePeerMediaStatusReceived = useCallback((socketId: string, uid: string, isAudioMuted: boolean, cameraOn: boolean) => {
+    setRemoteMediaStatus(prev => ({
+      ...prev,
+      [uid]: { isAudioMuted, cameraOn }
+    }))
+  }, [])
+
   const { localStream, remoteStreams, peerSocketIds, startLocalStream, stopLocalStream, toggleMic, toggleCamera, permissionError } = useWebRTC(
     roomId!,
     user?.uid || '',
     localParticipant,
-    handlePeerMetadataReceived
+    handlePeerMetadataReceived,
+    handlePeerMediaStatusReceived
   )
 
   useEffect(() => {
@@ -533,6 +542,7 @@ export default function VideoCallPage() {
               }
               
               const name = participant ? `${participant.firstName} ${participant.lastName}`.trim() || participant.username : 'Participante'
+              const status = uid ? remoteMediaStatus[uid] : undefined
               
               return (
                 <div key={socketId} className="w-full h-full min-h-[200px]">
@@ -543,6 +553,8 @@ export default function VideoCallPage() {
                     displayName={name}
                     uid={participant?.uid}
                     avatarUrl={participant?.avatarUrl}
+                    isAudioMuted={status?.isAudioMuted}
+                    cameraOn={status?.cameraOn}
                   />
                 </div>
               )
