@@ -14,11 +14,11 @@
  *   /dashboard                -> DashboardPage
  *   /perfil                   -> PerfilPage
  *   /salas/crear              -> SalasCrearPage
- *   /salas/:roomId            -> SalaRoomPage
+ *   /salas/:roomId            -> Redirige a /salas/:roomId/chat
  *   /salas/:roomId/configurar -> SalasConfigurarPage
  *   /unirse                   -> UnirsePage
  */
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom'
 
 // Paginas publicas
 import LandingPage from '../pages/LandingPage'
@@ -31,14 +31,19 @@ import NotFoundPage from '../pages/NotFoundPage'
 import DashboardPage from '../pages/DashboardPage'
 import PerfilPage from '../pages/PerfilPage'
 import SalasCrearPage from '../pages/SalasCrearPage'
-import SalaRoomPage from '../pages/SalaRoomPage'
 import SalasConfigurarPage from '../pages/SalasConfigurarPage'
 import ChatPage from '../pages/ChatPage'
+import VideoCallPage from '../pages/VideoCallPage'
 import UnirsePage from '../pages/UnirsePage'
 
 // Guards de ruta
 import ProtectedRoute from '../components/common/ProtectedRoute'
 import PublicOnlyRoute from '../components/common/PublicOnlyRoute'
+
+function RedirectToRoomChat() {
+  const { roomId } = useParams<{ roomId: string }>()
+  return <Navigate to={`/salas/${roomId}/chat`} replace />
+}
 
 export default function AppRouter() {
   return (
@@ -98,7 +103,7 @@ export default function AppRouter() {
           path="/salas/:roomId"
           element={
             <ProtectedRoute>
-              <SalaRoomPage />
+              <RedirectToRoomChat />
             </ProtectedRoute>
           }
         />
@@ -115,6 +120,14 @@ export default function AppRouter() {
           element={
             <ProtectedRoute>
               <ChatPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/salas/:roomId/video"
+          element={
+            <ProtectedRoute>
+              <VideoCallPage />
             </ProtectedRoute>
           }
         />

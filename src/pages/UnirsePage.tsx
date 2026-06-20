@@ -29,7 +29,7 @@ export default function UnirsePage() {
 
     try {
       const room = await joinRoom(trimmedRoomId)
-      navigate(`/salas/${room.id}`, { state: { room }, replace: true })
+      navigate(`/salas/${room.id}/chat`, { state: { room }, replace: true })
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'No se pudo ingresar a la sala. Intenta de nuevo.'
       setError(message)

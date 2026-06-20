@@ -5,9 +5,10 @@ import { useAuth } from '@/contexts/useAuth'
 
 interface DashboardHeaderProps {
   onLogout?: () => void;
+  fullWidth?: boolean;
 }
 
-export default function DashboardHeader({ onLogout }: DashboardHeaderProps) {
+export default function DashboardHeader({ onLogout, fullWidth = false }: DashboardHeaderProps) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [isOpen, setIsOpen] = useState(false)
@@ -55,7 +56,7 @@ export default function DashboardHeader({ onLogout }: DashboardHeaderProps) {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-900">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <div className={`mx-auto flex h-16 ${fullWidth ? 'max-w-full' : 'max-w-7xl'} items-center justify-between px-4 sm:px-6 lg:px-8`}>
         <Link to="/dashboard" className="flex items-center gap-2">
           <img src="/logo.png" alt="Salón de Estudio" className="h-7 w-7 object-contain" />
           <span className="text-lg font-bold text-slate-900 dark:text-white">
