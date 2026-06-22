@@ -124,6 +124,8 @@ export default function ChatPage() {
   const [sending, setSending] = useState(false)
   const [activeNav, setActiveNav] = useState<NavTab>('chat')
   const [copied, setCopied] = useState(false)
+  const [leftSidebarOpen, setLeftSidebarOpen] = useState(false)
+  const [rightSidebarOpen, setRightSidebarOpen] = useState(false)
   
   // Room Management states
   const [editingName, setEditingName] = useState(false)
@@ -415,8 +417,18 @@ export default function ChatPage() {
       {/* ════════════════════ CONTENT ════════════════════ */}
       <div className="flex flex-1 overflow-hidden">
 
+        {/* Backdrop for Left Sidebar (Mobile only) */}
+        {leftSidebarOpen && (
+          <div
+            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs md:hidden"
+            onClick={() => setLeftSidebarOpen(false)}
+          />
+        )}
+
         {/* ──────────── LEFT SIDEBAR ──────────── */}
-        <aside className="flex w-52 shrink-0 flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+        <aside className={`fixed inset-y-0 left-0 z-40 flex w-52 transform flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 transition-transform duration-200 ease-in-out md:static md:translate-x-0 ${
+          leftSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}>
           {/* Room card */}
           <div className="m-3 mb-2">
             <div className="rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 p-3 text-white shadow-sm">
@@ -489,7 +501,7 @@ export default function ChatPage() {
               <button
                 key={id}
                 type="button"
-                onClick={() => setActiveNav(id)}
+                onClick={() => { setActiveNav(id); setLeftSidebarOpen(false); }}
                 className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[13px] transition-all duration-150 ${
                   activeNav === id
                     ? 'bg-blue-600 font-semibold text-white shadow-sm'
@@ -544,60 +556,84 @@ export default function ChatPage() {
         <main className="flex flex-1 flex-col overflow-hidden bg-slate-50/50 dark:bg-slate-950/50 p-4 gap-4">
           
           {/* Top Card: Video Call */}
-          <div className={`flex shrink-0 items-center justify-between rounded-2xl border px-6 py-6 shadow-sm relative min-h-[96px] ${
+          <div className={`flex shrink-0 flex-col sm:flex-row items-center gap-4 rounded-2xl border p-5 sm:p-6 sm:pl-24 shadow-sm relative ${
             isVideoCallActive
               ? 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-900/40 dark:bg-emerald-950/20'
               : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900'
           }`}>
-            <div className={`absolute left-6 flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-2xl shadow-md ${
+            <div className={`sm:absolute sm:left-6 flex h-12 w-12 sm:h-[60px] sm:w-[60px] shrink-0 items-center justify-center rounded-2xl shadow-md ${
               isVideoCallActive ? 'bg-emerald-600' : 'bg-blue-600'
             }`}>
-              <Video size={28} className="text-white" />
+              <Video className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
             </div>
-            <div className="flex flex-1 flex-col items-center gap-2 pl-20 sm:pl-24">
+            <div className="flex flex-1 flex-col items-center sm:items-start gap-2 w-full">
               {isVideoCallActive && (
                 <div className="flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
                   <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                   Videollamada activa · {videoCallCount} {videoCallCount === 1 ? 'participante' : 'participantes'}
                 </div>
               )}
-              <button
-                type="button"
-                onClick={() => navigate(`/salas/${roomId}/video`)}
-                className={`flex items-center gap-2 rounded-xl px-8 py-3 text-sm font-semibold text-white shadow-sm transition-colors active:scale-[0.98] ${
-                  isVideoCallActive
-                    ? 'bg-emerald-600 hover:bg-emerald-700'
-                    : 'bg-[#0047E1] hover:bg-blue-800'
-                }`}
-              >
-                <Play size={16} className="fill-current" />
-                {isVideoCallActive ? 'Unirse a la videollamada' : 'Iniciar una videollamada'}
-              </button>
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
+                <p className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400">
+                  {isVideoCallActive ? 'Hay un debate en curso' : 'Inicia un debate grupal por video'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/salas/${roomId}/video`)}
+                  className={`w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-sm transition-colors active:scale-[0.98] ${
+                    isVideoCallActive
+                      ? 'bg-emerald-600 hover:bg-emerald-700'
+                      : 'bg-[#0047E1] hover:bg-blue-800'
+                  }`}
+                >
+                  <Play size={14} className="fill-current" />
+                  {isVideoCallActive ? 'Unirse al debate' : 'Iniciar debate'}
+                </button>
+              </div>
             </div>
           </div>
 
           {/* Chat Container Card */}
           <div className="flex flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm">
             {/* Header inside chat container */}
-            <div className="flex shrink-0 items-center justify-between border-b border-slate-100 dark:border-slate-800 px-6 py-4">
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50/80 dark:bg-blue-950/40">
-                  <BookOpen size={22} className="text-blue-600 dark:text-blue-400" />
+            <div className="flex shrink-0 items-center justify-between border-b border-slate-100 dark:border-slate-800 px-4 sm:px-6 py-4">
+              <div className="flex items-center gap-3 sm:gap-4">
+                {/* Left Sidebar Toggle Button (Mobile only) */}
+                <button
+                  onClick={() => setLeftSidebarOpen(!leftSidebarOpen)}
+                  className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 md:hidden dark:text-slate-400 dark:hover:bg-slate-800"
+                  aria-label="Abrir menú de la sala"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="h-5.5 w-5.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                  </svg>
+                </button>
+
+                <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50/80 dark:bg-blue-950/40">
+                  <BookOpen className="h-5 w-5 sm:h-[22px] sm:w-[22px] text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                  <h2 className="text-[15px] font-bold text-slate-900 dark:text-white leading-tight">{room.name}</h2>
-                  <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    {onlineCount} {onlineCount === 1 ? 'participante activo' : 'participantes activos'}
-                    {isVideoCallActive && ` · ${videoCallCount} en videollamada`}
+                  <h2 className="text-sm sm:text-[15px] font-bold text-slate-900 dark:text-white leading-tight">{room.name}</h2>
+                  <p className="text-xs sm:text-[13px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    {onlineCount} {onlineCount === 1 ? 'activo' : 'activos'}
+                    {isVideoCallActive && ` · ${videoCallCount} en video`}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button className="rounded-full p-2.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors dark:hover:bg-slate-800 dark:hover:text-slate-200">
-                  <Search size={20} />
+              <div className="flex items-center gap-1 sm:gap-2">
+                <button className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors dark:hover:bg-slate-800 dark:hover:text-slate-200">
+                  <Search size={18} className="sm:h-5 sm:w-5" />
                 </button>
-                <button className="rounded-full p-2.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors dark:hover:bg-slate-800 dark:hover:text-slate-200">
-                  <MoreVertical size={20} />
+                {/* Right Sidebar Toggle Button (Mobile only) */}
+                <button
+                  onClick={() => setRightSidebarOpen(!rightSidebarOpen)}
+                  className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors lg:hidden dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                  aria-label="Ver participantes"
+                >
+                  <Users size={18} className="sm:h-5 sm:w-5" />
+                </button>
+                <button className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors dark:hover:bg-slate-800 dark:hover:text-slate-200">
+                  <MoreVertical size={18} className="sm:h-5 sm:w-5" />
                 </button>
               </div>
             </div>
@@ -665,7 +701,7 @@ export default function ChatPage() {
 
                         {/* Bubble column */}
                         <div
-                          className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} max-w-[65%]`}
+                          className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} max-w-[85%] md:max-w-[65%]`}
                         >
                           {/* Meta row */}
                           {showSenderInfo && !isOwn && (
@@ -770,8 +806,18 @@ export default function ChatPage() {
         </div>
         </main>
 
+        {/* Backdrop for Right Sidebar (Mobile only) */}
+        {rightSidebarOpen && (
+          <div
+            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs lg:hidden"
+            onClick={() => setRightSidebarOpen(false)}
+          />
+        )}
+
         {/* ──────────── RIGHT SIDEBAR ──────────── */}
-        <aside className="flex w-72 shrink-0 flex-col border-l border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+        <aside className={`fixed inset-y-0 right-0 z-40 flex w-72 transform flex-col border-l border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 transition-transform duration-200 ease-in-out lg:static lg:translate-x-0 ${
+          rightSidebarOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}>
           {/* Participants header */}
           <div className="px-4 pb-3 pt-4">
             <div className="flex items-center justify-between">

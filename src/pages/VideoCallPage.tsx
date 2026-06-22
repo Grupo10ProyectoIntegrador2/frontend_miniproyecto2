@@ -222,6 +222,7 @@ export default function VideoCallPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(true)
+  const [showChatSidebar, setShowChatSidebar] = useState(window.innerWidth >= 1024)
   const [error, setError] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   
@@ -570,8 +571,8 @@ export default function VideoCallPage() {
           </div>
 
           {/* Controls Bar */}
-          <div className="mt-4 flex shrink-0 items-center justify-center">
-            <div className="flex items-center gap-2 rounded-2xl bg-blue-100/50 px-6 py-3 shadow-sm backdrop-blur-md border border-blue-200/50">
+          <div className="mt-4 flex shrink-0 items-center justify-center w-full px-2">
+            <div className="flex flex-wrap items-center justify-center gap-1 sm:gap-2 rounded-2xl bg-blue-100/50 px-4 sm:px-6 py-2 sm:py-3 shadow-sm backdrop-blur-md border border-blue-200/50 max-w-full">
               
               <button 
                 onClick={handleMicToggle}
@@ -601,7 +602,19 @@ export default function VideoCallPage() {
                 <span className="text-[10px] font-medium">Más</span>
               </button>
               
-              <div className="mx-2 h-10 w-px bg-blue-300/50" />
+              <button 
+                onClick={() => setShowChatSidebar(!showChatSidebar)}
+                className={`flex flex-col items-center gap-1 rounded-xl p-2.5 transition-colors ${
+                  showChatSidebar ? 'bg-blue-200/70 text-blue-950 font-semibold' : 'text-blue-900 hover:bg-blue-200'
+                }`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="h-5 w-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v5.018Z" />
+                </svg>
+                <span className="text-[10px] font-medium">Chat</span>
+              </button>
+
+              <div className="mx-1 sm:mx-2 h-10 w-px bg-blue-300/50" />
               
               <button 
                 onClick={leaveCall}
@@ -618,7 +631,14 @@ export default function VideoCallPage() {
         </div>
 
         {/* Right: Sidebar Chat */}
-        <aside className="flex w-[320px] shrink-0 flex-col overflow-hidden rounded-2xl bg-white shadow-sm border border-slate-100">
+        {showChatSidebar && (
+          <>
+            {/* Backdrop on mobile only */}
+            <div
+              className="fixed inset-0 z-30 bg-black/20 backdrop-blur-xs lg:hidden"
+              onClick={() => setShowChatSidebar(false)}
+            />
+            <aside className="fixed right-4 bottom-24 top-20 z-40 flex w-80 lg:static lg:w-[320px] shrink-0 flex-col overflow-hidden rounded-2xl bg-white dark:bg-slate-900 shadow-xl lg:shadow-sm border border-slate-100 dark:border-slate-800 transition-all duration-200">
           {/* Participantes */}
           <div className="border-b border-slate-100 px-4 py-3">
             <div className="flex items-center justify-between">
@@ -712,6 +732,8 @@ export default function VideoCallPage() {
             </div>
           </div>
         </aside>
+          </>
+        )}
         
       </main>
     </div>

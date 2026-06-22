@@ -23,7 +23,7 @@ export default function AvatarSelector({ selected, onSelect, error }: AvatarSele
       <p className="text-sm font-medium text-[var(--color-text)]">
         Elige tu avatar <span className="ml-0.5 text-[var(--color-error)]">*</span>
       </p>
-      <div className="flex justify-between items-center w-full gap-1">
+      <div className="flex flex-wrap justify-center sm:justify-between items-center w-full gap-2.5 sm:gap-1">
         {AVATARS.map((avatar) => {
           const isSelected = selected === avatar.id
           return (

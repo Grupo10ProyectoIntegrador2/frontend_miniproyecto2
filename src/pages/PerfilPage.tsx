@@ -312,15 +312,15 @@ export default function PerfilPage() {
           
           {/* Sidebar Navigation */}
           <aside className="lg:col-span-1">
-            <nav className="flex flex-col gap-2">
-              <span className="px-3 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">
+            <nav className="flex flex-row overflow-x-auto pb-2 lg:pb-0 lg:flex-col gap-2 w-full lg:w-auto shrink-0">
+              <span className="hidden lg:block px-3 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">
                 Secciones
               </span>
 
               {/* Editar Perfil tab */}
               <button
                 onClick={() => handleTabChange('perfil')}
-                className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl border text-left font-semibold text-sm transition-all cursor-pointer ${
+                className={`flex items-center gap-3 w-auto lg:w-full whitespace-nowrap px-4 py-3 rounded-xl border text-left font-semibold text-sm transition-all cursor-pointer ${
                   activeTab === 'perfil'
                     ? 'bg-blue-50/60 dark:bg-blue-950/20 border-blue-100 dark:border-blue-900/40 text-blue-600 dark:text-blue-400 shadow-xs'
                     : 'bg-white dark:bg-slate-900 border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'
@@ -334,7 +334,7 @@ export default function PerfilPage() {
               {/* Visualizacion tab */}
               <button
                 onClick={() => handleTabChange('visualizacion')}
-                className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl border text-left font-semibold text-sm transition-all cursor-pointer ${
+                className={`flex items-center gap-3 w-auto lg:w-full whitespace-nowrap px-4 py-3 rounded-xl border text-left font-semibold text-sm transition-all cursor-pointer ${
                   activeTab === 'visualizacion'
                     ? 'bg-blue-50/60 dark:bg-blue-950/20 border-blue-100 dark:border-blue-900/40 text-blue-600 dark:text-blue-400 shadow-xs'
                     : 'bg-white dark:bg-slate-900 border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'
@@ -348,7 +348,7 @@ export default function PerfilPage() {
               {/* Accesibilidad tab */}
               <button
                 onClick={() => handleTabChange('accesibilidad')}
-                className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl border text-left font-semibold text-sm transition-all cursor-pointer ${
+                className={`flex items-center gap-3 w-auto lg:w-full whitespace-nowrap px-4 py-3 rounded-xl border text-left font-semibold text-sm transition-all cursor-pointer ${
                   activeTab === 'accesibilidad'
                     ? 'bg-blue-50/60 dark:bg-blue-950/20 border-blue-100 dark:border-blue-900/40 text-blue-600 dark:text-blue-400 shadow-xs'
                     : 'bg-white dark:bg-slate-900 border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'
