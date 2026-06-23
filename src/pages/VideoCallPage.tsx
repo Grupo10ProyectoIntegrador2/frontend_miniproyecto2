@@ -31,6 +31,11 @@ interface ChatMessage {
   createdAt: string
 }
 
+interface PeerAvState {
+  audioMuted: boolean
+  videoMuted: boolean
+}
+
 function getInitials(name: string): string {
   return name
     .replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]/g, '')
@@ -59,12 +64,14 @@ function VideoBox({
   isLocal,
   name,
   isAudioMuted,
+  isVideoMuted = false,
   isScreenSharing = false,
 }: {
   stream: MediaStream | null
   isLocal: boolean
   name: string
   isAudioMuted?: boolean
+  isVideoMuted?: boolean
   isScreenSharing?: boolean
 }) {
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -77,7 +84,8 @@ function VideoBox({
       
       const checkVideoTrack = () => {
         const videoTrack = stream.getVideoTracks()[0]
-        setHasVideo(!!videoTrack && videoTrack.enabled && videoTrack.readyState === 'live')
+        const trackLive = !!videoTrack && videoTrack.enabled && videoTrack.readyState === 'live'
+        setHasVideo(trackLive && !isVideoMuted)
       }
       
       checkVideoTrack()
@@ -116,7 +124,7 @@ function VideoBox({
     } else {
       setHasVideo(false)
     }
-  }, [stream, isLocal])
+  }, [stream, isLocal, isVideoMuted])
 
   return (
     <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-2xl bg-slate-900 shadow-sm">
@@ -147,15 +155,36 @@ function VideoBox({
       </div>
       
       {isScreenSharing && (
-        <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-blue-600/90 px-2 py-1 backdrop-blur-md">
-          <MonitorUp size={12} className="text-white" />
-          <span className="text-[10px] font-medium text-white">Presentando</span>
+        <div className="absolute right-3 top-3 flex flex-col items-end gap-1.5">
+          <div className="flex items-center gap-1 rounded-full bg-blue-600/90 px-2 py-1 backdrop-blur-md">
+            <MonitorUp size={12} className="text-white" />
+            <span className="text-[10px] font-medium text-white">Presentando</span>
+          </div>
+          {isAudioMuted && (
+            <div className="flex items-center justify-center rounded-full bg-red-500/90 p-1.5 backdrop-blur-md">
+              <MicOff size={14} className="text-white" />
+            </div>
+          )}
+          {isVideoMuted && (
+            <div className="flex items-center justify-center rounded-full bg-slate-700/90 p-1.5 backdrop-blur-md">
+              <VideoOff size={14} className="text-white" />
+            </div>
+          )}
         </div>
       )}
 
-      {isAudioMuted && (
-        <div className="absolute right-3 top-3 flex items-center justify-center rounded-full bg-red-500/90 p-1.5 backdrop-blur-md">
-          <MicOff size={14} className="text-white" />
+      {!isScreenSharing && (isAudioMuted || isVideoMuted) && (
+        <div className="absolute right-3 top-3 flex flex-col items-end gap-1.5">
+          {isAudioMuted && (
+            <div className="flex items-center justify-center rounded-full bg-red-500/90 p-1.5 backdrop-blur-md">
+              <MicOff size={14} className="text-white" />
+            </div>
+          )}
+          {isVideoMuted && (
+            <div className="flex items-center justify-center rounded-full bg-slate-700/90 p-1.5 backdrop-blur-md">
+              <VideoOff size={14} className="text-white" />
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -182,6 +211,7 @@ export default function VideoCallPage() {
   const [micEnabled, setMicEnabled] = useState(true)
   const [cameraEnabled, setCameraEnabled] = useState(true)
   const [peerScreenSharing, setPeerScreenSharing] = useState<Map<string, boolean>>(new Map())
+  const [peerAvState, setPeerAvState] = useState<Map<string, PeerAvState>>(new Map())
 
   const localParticipant = useMemo(() => {
     if (!user || !room) return undefined
@@ -300,6 +330,18 @@ export default function VideoCallPage() {
         next.delete(payload.socketId)
         return next
       })
+      if (payload.uid) {
+        setPeerScreenSharing(prev => {
+          const next = new Map(prev)
+          next.delete(payload.uid)
+          return next
+        })
+        setPeerAvState(prev => {
+          const next = new Map(prev)
+          next.delete(payload.uid)
+          return next
+        })
+      }
     }
 
     const handleChatHistory = (payload: { roomId: string; messages: ChatMessage[] }) => {
@@ -316,12 +358,22 @@ export default function VideoCallPage() {
 
     const handleVideoCallStatus = (payload: {
       roomId: string
-      states?: Array<{ uid: string; isScreenSharing: boolean }>
+      states?: Array<{
+        uid: string
+        isScreenSharing: boolean
+        audioMuted: boolean
+        videoMuted: boolean
+      }>
     }) => {
       if (payload.roomId !== room.id) return
-      const next = new Map<string, boolean>()
-      payload.states?.forEach((s) => next.set(s.uid, s.isScreenSharing))
-      setPeerScreenSharing(next)
+      const screenNext = new Map<string, boolean>()
+      const avNext = new Map<string, PeerAvState>()
+      payload.states?.forEach((s) => {
+        screenNext.set(s.uid, s.isScreenSharing)
+        avNext.set(s.uid, { audioMuted: s.audioMuted, videoMuted: s.videoMuted })
+      })
+      setPeerScreenSharing(screenNext)
+      setPeerAvState(avNext)
     }
 
     const handleScreenShareChanged = (payload: {
@@ -332,6 +384,22 @@ export default function VideoCallPage() {
       setPeerScreenSharing((prev) => {
         const next = new Map(prev)
         next.set(payload.uid, payload.isScreenSharing)
+        return next
+      })
+    }
+
+    const handleAvStateChanged = (payload: {
+      uid: string
+      socketId: string
+      audioMuted: boolean
+      videoMuted: boolean
+    }) => {
+      setPeerAvState((prev) => {
+        const next = new Map(prev)
+        next.set(payload.uid, {
+          audioMuted: payload.audioMuted,
+          videoMuted: payload.videoMuted,
+        })
         return next
       })
     }
@@ -350,6 +418,7 @@ export default function VideoCallPage() {
     socket.on('new-message', handleNewMessage)
     socket.on('video-call-status', handleVideoCallStatus)
     socket.on('screen-share-changed', handleScreenShareChanged)
+    socket.on('av-state-changed', handleAvStateChanged)
 
     return () => {
       socket.off('user-joined', handleUserJoined)
@@ -358,6 +427,7 @@ export default function VideoCallPage() {
       socket.off('new-message', handleNewMessage)
       socket.off('video-call-status', handleVideoCallStatus)
       socket.off('screen-share-changed', handleScreenShareChanged)
+      socket.off('av-state-changed', handleAvStateChanged)
       socket.off('connect')
       socket.emit('leave-video-call', { roomId: room.id })
       socket.emit('leave-room', room.id)
@@ -380,14 +450,21 @@ export default function VideoCallPage() {
     }
   }
 
+  const emitAvState = (audioMuted: boolean, videoMuted: boolean) => {
+    if (!room) return
+    socket.emit('toggle-av', { roomId: room.id, audioMuted, videoMuted })
+  }
+
   const handleMicToggle = () => {
     const state = toggleMic()
     setMicEnabled(state)
+    emitAvState(!state, !cameraEnabled)
   }
 
   const handleCameraToggle = () => {
     const state = toggleCamera()
     setCameraEnabled(state)
+    emitAvState(!micEnabled, !state)
   }
 
   const handleScreenShareToggle = async () => {
@@ -476,6 +553,7 @@ export default function VideoCallPage() {
                 isLocal={true}
                 name={`Tú (${userFullName})`}
                 isAudioMuted={!micEnabled}
+                isVideoMuted={!cameraEnabled && !isScreenSharing}
                 isScreenSharing={isScreenSharing}
               />
             </div>
@@ -499,6 +577,7 @@ export default function VideoCallPage() {
               
               const name = participant ? `${participant.firstName} ${participant.lastName}`.trim() || participant.username : 'Participante'
               const remoteIsSharing = uid ? peerScreenSharing.get(uid) === true : false
+              const remoteAv = uid ? peerAvState.get(uid) : undefined
               
               return (
                 <div key={socketId} className="w-full h-full min-h-[200px]">
@@ -506,6 +585,8 @@ export default function VideoCallPage() {
                     stream={stream}
                     isLocal={false}
                     name={name}
+                    isAudioMuted={remoteAv?.audioMuted}
+                    isVideoMuted={remoteAv?.videoMuted && !remoteIsSharing}
                     isScreenSharing={remoteIsSharing}
                   />
                 </div>
