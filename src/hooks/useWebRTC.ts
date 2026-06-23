@@ -15,6 +15,8 @@ export function useWebRTC(
   onPeerMetadataReceived?: (socketId: string, uid: string, participant: any) => void
 ) {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null)
+  const [screenStream, setScreenStream] = useState<MediaStream | null>(null)
+  const [isScreenSharing, setIsScreenSharing] = useState(false)
   const [permissionError, setPermissionError] = useState<string | null>(null)
   const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map())
   const [peerSocketIds, setPeerSocketIds] = useState<Set<string>>(new Set())
@@ -23,6 +25,9 @@ export function useWebRTC(
   const remoteCandidatesQueue = useRef<Map<string, RTCIceCandidateInit[]>>(new Map())
   const dataChannels = useRef<Map<string, RTCDataChannel>>(new Map())
   const localStreamRef = useRef<MediaStream | null>(null)
+  const screenStreamRef = useRef<MediaStream | null>(null)
+  const roomIdRef = useRef(roomId)
+  roomIdRef.current = roomId
 
   // ── Perfect Negotiation state ──────────────────────────────────────
   const makingOffer = useRef<Map<string, boolean>>(new Map())
@@ -146,6 +151,88 @@ export function useWebRTC(
     }
   }, [])
 
+  const replaceVideoTrackOnPeers = useCallback((track: MediaStreamTrack | null) => {
+    peerConnections.current.forEach((pc) => {
+      const videoSender = pc.getSenders().find((s) => s.track?.kind === 'video')
+      if (videoSender) {
+        void videoSender.replaceTrack(track)
+      } else if (track && screenStreamRef.current) {
+        pc.addTrack(track, screenStreamRef.current)
+      }
+    })
+  }, [])
+
+  const stopScreenShareInternal = useCallback(() => {
+    if (screenStreamRef.current) {
+      screenStreamRef.current.getTracks().forEach((t) => t.stop())
+      screenStreamRef.current = null
+    }
+    setScreenStream(null)
+    setIsScreenSharing(false)
+
+    const cameraTrack = localStreamRef.current?.getVideoTracks()[0] ?? null
+    replaceVideoTrackOnPeers(cameraTrack)
+
+    if (roomIdRef.current) {
+      socket.emit('toggle-screen-share', {
+        roomId: roomIdRef.current,
+        isScreenSharing: false,
+      })
+    }
+  }, [replaceVideoTrackOnPeers])
+
+  const startScreenShare = useCallback(async (): Promise<boolean> => {
+    if (screenStreamRef.current) return true
+
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: false,
+      })
+
+      const screenTrack = stream.getVideoTracks()[0]
+      if (!screenTrack) {
+        stream.getTracks().forEach((t) => t.stop())
+        return false
+      }
+
+      screenStreamRef.current = stream
+      setScreenStream(stream)
+      setIsScreenSharing(true)
+
+      screenTrack.onended = () => {
+        stopScreenShareInternal()
+      }
+
+      replaceVideoTrackOnPeers(screenTrack)
+
+      if (roomIdRef.current) {
+        socket.emit('toggle-screen-share', {
+          roomId: roomIdRef.current,
+          isScreenSharing: true,
+        })
+      }
+
+      return true
+    } catch (error) {
+      console.error('[ScreenShare] Error o cancelado por el usuario:', error)
+      return false
+    }
+  }, [replaceVideoTrackOnPeers, stopScreenShareInternal])
+
+  const stopScreenShare = useCallback(() => {
+    if (!screenStreamRef.current) return
+    stopScreenShareInternal()
+  }, [stopScreenShareInternal])
+
+  const toggleScreenShare = useCallback(async () => {
+    if (screenStreamRef.current) {
+      stopScreenShare()
+      return false
+    }
+    return startScreenShare()
+  }, [startScreenShare, stopScreenShare])
+
   // ── Create peer connection – Perfect Negotiation pattern ───────────
   const createPeerConnection = useCallback((targetSocketId: string) => {
     if (peerConnections.current.has(targetSocketId)) {
@@ -176,7 +263,14 @@ export function useWebRTC(
       console.log(`[WebRTC] Connection state with ${targetSocketId}: ${pc.connectionState}`)
     }
 
-    if (localStreamRef.current) {
+    const screenTrack = screenStreamRef.current?.getVideoTracks()[0]
+    if (screenTrack && screenStreamRef.current) {
+      pc.addTrack(screenTrack, screenStreamRef.current)
+      const audioTrack = localStreamRef.current?.getAudioTracks()[0]
+      if (audioTrack && localStreamRef.current) {
+        pc.addTrack(audioTrack, localStreamRef.current)
+      }
+    } else if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((track) => {
         pc.addTrack(track, localStreamRef.current!)
       })
@@ -369,6 +463,7 @@ export function useWebRTC(
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      stopScreenShareInternal()
       stopLocalStream()
       peerConnections.current.forEach((pc) => pc.close())
       peerConnections.current.clear()
@@ -378,7 +473,7 @@ export function useWebRTC(
       ignoreOffer.current.clear()
       setRemoteStreams(new Map())
     }
-  }, [stopLocalStream])
+  }, [stopLocalStream, stopScreenShareInternal])
 
   const toggleMic = () => {
     if (localStreamRef.current) {
@@ -404,12 +499,17 @@ export function useWebRTC(
 
   return {
     localStream,
+    screenStream,
     remoteStreams,
     peerSocketIds,
+    isScreenSharing,
     startLocalStream,
     stopLocalStream,
     toggleMic,
     toggleCamera,
-    permissionError
+    startScreenShare,
+    stopScreenShare,
+    toggleScreenShare,
+    permissionError,
   }
 }

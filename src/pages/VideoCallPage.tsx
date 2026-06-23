@@ -54,7 +54,19 @@ function formatTime(iso: string): string {
 }
 
 // Subcomponent: Video Box
-function VideoBox({ stream, isLocal, name, isAudioMuted }: { stream: MediaStream | null, isLocal: boolean, name: string, isAudioMuted?: boolean }) {
+function VideoBox({
+  stream,
+  isLocal,
+  name,
+  isAudioMuted,
+  isScreenSharing = false,
+}: {
+  stream: MediaStream | null
+  isLocal: boolean
+  name: string
+  isAudioMuted?: boolean
+  isScreenSharing?: boolean
+}) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [hasVideo, setHasVideo] = useState(false)
   
@@ -113,7 +125,13 @@ function VideoBox({ stream, isLocal, name, isAudioMuted }: { stream: MediaStream
         ref={videoRef}
         autoPlay
         playsInline
-        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${hasVideo ? 'opacity-100' : 'opacity-0'}`}
+        className={`absolute inset-0 h-full w-full transition-opacity duration-300 ${
+          hasVideo
+            ? isScreenSharing
+              ? 'object-contain opacity-100'
+              : 'object-cover opacity-100'
+            : 'object-cover opacity-0'
+        }`}
       />
       
       {!hasVideo && (
@@ -128,6 +146,13 @@ function VideoBox({ stream, isLocal, name, isAudioMuted }: { stream: MediaStream
         <span className="text-xs font-medium text-white">{name}</span>
       </div>
       
+      {isScreenSharing && (
+        <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-blue-600/90 px-2 py-1 backdrop-blur-md">
+          <MonitorUp size={12} className="text-white" />
+          <span className="text-[10px] font-medium text-white">Presentando</span>
+        </div>
+      )}
+
       {isAudioMuted && (
         <div className="absolute right-3 top-3 flex items-center justify-center rounded-full bg-red-500/90 p-1.5 backdrop-blur-md">
           <MicOff size={14} className="text-white" />
@@ -156,6 +181,7 @@ export default function VideoCallPage() {
   
   const [micEnabled, setMicEnabled] = useState(true)
   const [cameraEnabled, setCameraEnabled] = useState(true)
+  const [peerScreenSharing, setPeerScreenSharing] = useState<Map<string, boolean>>(new Map())
 
   const localParticipant = useMemo(() => {
     if (!user || !room) return undefined
@@ -185,7 +211,19 @@ export default function VideoCallPage() {
     })
   }, [])
 
-  const { localStream, remoteStreams, peerSocketIds, startLocalStream, stopLocalStream, toggleMic, toggleCamera, permissionError } = useWebRTC(
+  const {
+    localStream,
+    screenStream,
+    remoteStreams,
+    peerSocketIds,
+    isScreenSharing,
+    startLocalStream,
+    stopLocalStream,
+    toggleMic,
+    toggleCamera,
+    toggleScreenShare,
+    permissionError,
+  } = useWebRTC(
     roomId!,
     user?.uid || '',
     localParticipant,
@@ -231,6 +269,7 @@ export default function VideoCallPage() {
       const joinRoomSocket = () => {
         if (localParticipant) {
           socket.emit('join-room', { roomId: room.id, participant: localParticipant })
+          socket.emit('join-video-call', { roomId: room.id, participant: localParticipant })
         }
       }
 
@@ -275,6 +314,28 @@ export default function VideoCallPage() {
       }, 100)
     }
 
+    const handleVideoCallStatus = (payload: {
+      roomId: string
+      states?: Array<{ uid: string; isScreenSharing: boolean }>
+    }) => {
+      if (payload.roomId !== room.id) return
+      const next = new Map<string, boolean>()
+      payload.states?.forEach((s) => next.set(s.uid, s.isScreenSharing))
+      setPeerScreenSharing(next)
+    }
+
+    const handleScreenShareChanged = (payload: {
+      uid: string
+      socketId: string
+      isScreenSharing: boolean
+    }) => {
+      setPeerScreenSharing((prev) => {
+        const next = new Map(prev)
+        next.set(payload.uid, payload.isScreenSharing)
+        return next
+      })
+    }
+
     // Iniciar stream ANTES de conectar sockets para que los tracks
     // locales estén disponibles cuando lleguen eventos user-joined
     const init = async () => {
@@ -287,13 +348,18 @@ export default function VideoCallPage() {
     socket.on('user-left', handleUserLeft)
     socket.on('chat-history', handleChatHistory)
     socket.on('new-message', handleNewMessage)
+    socket.on('video-call-status', handleVideoCallStatus)
+    socket.on('screen-share-changed', handleScreenShareChanged)
 
     return () => {
       socket.off('user-joined', handleUserJoined)
       socket.off('user-left', handleUserLeft)
       socket.off('chat-history', handleChatHistory)
       socket.off('new-message', handleNewMessage)
+      socket.off('video-call-status', handleVideoCallStatus)
+      socket.off('screen-share-changed', handleScreenShareChanged)
       socket.off('connect')
+      socket.emit('leave-video-call', { roomId: room.id })
       socket.emit('leave-room', room.id)
       socket.disconnect()
       stopLocalStream()
@@ -322,6 +388,10 @@ export default function VideoCallPage() {
   const handleCameraToggle = () => {
     const state = toggleCamera()
     setCameraEnabled(state)
+  }
+
+  const handleScreenShareToggle = async () => {
+    await toggleScreenShare()
   }
 
   const leaveCall = () => {
@@ -401,11 +471,12 @@ export default function VideoCallPage() {
             
             {/* Local Video */}
             <div className="w-full h-full min-h-[200px]">
-              <VideoBox 
-                stream={localStream} 
-                isLocal={true} 
-                name={`Tú (${userFullName})`} 
-                isAudioMuted={!micEnabled} 
+              <VideoBox
+                stream={isScreenSharing && screenStream ? screenStream : localStream}
+                isLocal={true}
+                name={`Tú (${userFullName})`}
+                isAudioMuted={!micEnabled}
+                isScreenSharing={isScreenSharing}
               />
             </div>
             
@@ -427,13 +498,15 @@ export default function VideoCallPage() {
               }
               
               const name = participant ? `${participant.firstName} ${participant.lastName}`.trim() || participant.username : 'Participante'
+              const remoteIsSharing = uid ? peerScreenSharing.get(uid) === true : false
               
               return (
                 <div key={socketId} className="w-full h-full min-h-[200px]">
-                  <VideoBox 
-                    stream={stream} 
-                    isLocal={false} 
-                    name={name} 
+                  <VideoBox
+                    stream={stream}
+                    isLocal={false}
+                    name={name}
+                    isScreenSharing={remoteIsSharing}
                   />
                 </div>
               )
@@ -460,11 +533,18 @@ export default function VideoCallPage() {
                 <span className="text-[10px] font-medium">Cámara</span>
               </button>
               
-              <button 
-                className="flex flex-col items-center gap-1 rounded-xl bg-blue-600 p-2.5 text-white transition-colors hover:bg-blue-700 shadow-sm"
+              <button
+                onClick={handleScreenShareToggle}
+                className={`flex flex-col items-center gap-1 rounded-xl p-2.5 transition-colors ${
+                  isScreenSharing
+                    ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
+                    : 'text-blue-900 hover:bg-blue-200'
+                }`}
               >
                 <MonitorUp size={20} />
-                <span className="text-[10px] font-medium">Compartir</span>
+                <span className="text-[10px] font-medium">
+                  {isScreenSharing ? 'Detener' : 'Compartir'}
+                </span>
               </button>
               
               <button className="flex flex-col items-center gap-1 rounded-xl p-2.5 text-blue-900 transition-colors hover:bg-blue-200">
