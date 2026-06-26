@@ -12,7 +12,8 @@ export function useWebRTC(
   roomId: string,
   userId: string,
   localParticipant?: any,
-  onPeerMetadataReceived?: (socketId: string, uid: string, participant: any) => void
+  onPeerMetadataReceived?: (socketId: string, uid: string, participant: any) => void,
+  onPeerMediaStatusReceived?: (socketId: string, uid: string, isAudioMuted: boolean, cameraOn: boolean) => void
 ) {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null)
   const [screenStream, setScreenStream] = useState<MediaStream | null>(null)
@@ -139,17 +140,32 @@ export function useWebRTC(
       const participant = localParticipantRef.current
       if (participant) {
         dc.send(JSON.stringify({
+          type: 'metadata',
           uid: userIdRef.current,
           participant
         }))
+        if (localStreamRef.current) {
+          const audioTrack = localStreamRef.current.getAudioTracks()[0]
+          const videoTrack = localStreamRef.current.getVideoTracks()[0]
+          dc.send(JSON.stringify({
+            type: 'media-status',
+            uid: userIdRef.current,
+            isAudioMuted: audioTrack ? !audioTrack.enabled : false,
+            cameraOn: videoTrack ? videoTrack.enabled : false
+          }))
+        }
       }
     }
 
     dc.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data)
-        console.log(`[DataChannel] Metadatos recibidos de ${targetSocketId}:`, data)
-        onPeerMetadataReceivedRef.current?.(targetSocketId, data.uid, data.participant)
+        if (data.type === 'media-status') {
+          onPeerMediaStatusReceivedRef.current?.(targetSocketId, data.uid, data.isAudioMuted, data.cameraOn)
+        } else {
+          console.log(`[DataChannel] Metadatos recibidos de ${targetSocketId}:`, data)
+          onPeerMetadataReceivedRef.current?.(targetSocketId, data.uid, data.participant || data)
+        }
       } catch (error) {
         console.error('[DataChannel] Error procesando mensaje de metadatos:', error)
       }
@@ -169,9 +185,20 @@ export function useWebRTC(
       const participant = localParticipantRef.current
       if (participant) {
         dc.send(JSON.stringify({
+          type: 'metadata',
           uid: userIdRef.current,
           participant
         }))
+        if (localStreamRef.current) {
+          const audioTrack = localStreamRef.current.getAudioTracks()[0]
+          const videoTrack = localStreamRef.current.getVideoTracks()[0]
+          dc.send(JSON.stringify({
+            type: 'media-status',
+            uid: userIdRef.current,
+            isAudioMuted: audioTrack ? !audioTrack.enabled : false,
+            cameraOn: videoTrack ? videoTrack.enabled : false
+          }))
+        }
       }
     }
   }, []) // No deps needed – reads from refs
@@ -204,6 +231,10 @@ export function useWebRTC(
         msg = 'Permiso denegado para acceder a la cámara y/o micrófono. Por favor, actívalos en la configuración de tu navegador.'
       } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
         msg = 'No se encontró ninguna cámara o micrófono conectado.'
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        msg = 'La cámara o micrófono está siendo usado por otra aplicación. Cierra otras apps que puedan estar usándolos (Teams, Zoom, Discord, etc.) e intenta de nuevo.'
+      } else if (error.name === 'OverconstrainedError') {
+        msg = 'La cámara no soporta la configuración solicitada. Intenta con otro dispositivo.'
       }
       setPermissionError(msg)
       return null
@@ -344,6 +375,10 @@ export function useWebRTC(
       localStreamRef.current.getTracks().forEach((track) => {
         pc.addTrack(track, localStreamRef.current!)
       })
+    } else {
+      // Even without local media, add transceivers so we can RECEIVE remote tracks
+      pc.addTransceiver('audio', { direction: 'recvonly' })
+      pc.addTransceiver('video', { direction: 'recvonly' })
     }
 
     pc.onnegotiationneeded = async () => {
@@ -520,11 +555,34 @@ export function useWebRTC(
     }
   }, [stopLocalStream, stopScreenShareInternal])
 
+  const broadcastMediaStatus = useCallback(() => {
+    if (localStreamRef.current) {
+      const audioTrack = localStreamRef.current.getAudioTracks()[0]
+      const videoTrack = localStreamRef.current.getVideoTracks()[0]
+      const isAudioMuted = audioTrack ? !audioTrack.enabled : false
+      const cameraOn = videoTrack ? videoTrack.enabled : false
+
+      const message = JSON.stringify({
+        type: 'media-status',
+        uid: userIdRef.current,
+        isAudioMuted,
+        cameraOn
+      })
+
+      dataChannels.current.forEach(dc => {
+        if (dc.readyState === 'open') {
+          dc.send(message)
+        }
+      })
+    }
+  }, [])
+
   const toggleMic = () => {
     if (localStreamRef.current) {
       const audioTrack = localStreamRef.current.getAudioTracks()[0]
       if (audioTrack) {
         audioTrack.enabled = !audioTrack.enabled
+        broadcastMediaStatus()
         return audioTrack.enabled
       }
     }
@@ -536,6 +594,7 @@ export function useWebRTC(
       const videoTrack = localStreamRef.current.getVideoTracks()[0]
       if (videoTrack) {
         videoTrack.enabled = !videoTrack.enabled
+        broadcastMediaStatus()
         return videoTrack.enabled
       }
     }

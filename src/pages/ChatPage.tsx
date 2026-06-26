@@ -23,6 +23,7 @@ import { socket } from '../lib/socket'
 import { joinRoom, getRoomParticipants, updateRoom, deleteRoom } from '../services/rooms.service'
 import DashboardHeader from '../components/DashboardHeader'
 import type { Room, RoomParticipant } from '../types/room.types'
+import type { RoomPresencePayload, VideoCallStatus } from '../types/videoCall.types'
 
 /* ─────────────── Types ─────────────── */
 
@@ -102,6 +103,8 @@ export default function ChatPage() {
 
   const [room, setRoom] = useState<Room | null>(null)
   const [participants, setParticipants] = useState<RoomParticipant[]>([])
+  const [onlineParticipants, setOnlineParticipants] = useState<RoomParticipant[]>([])
+  const [videoCallStatus, setVideoCallStatus] = useState<VideoCallStatus | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(true)
@@ -117,6 +120,8 @@ export default function ChatPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const participantsRef = useRef<RoomParticipant[]>([])
+  participantsRef.current = participants
 
   const handleCopyId = () => {
     if (!room) return
@@ -126,6 +131,27 @@ export default function ChatPage() {
   }
 
   const isOwner = user && room && room.createdBy === user.uid
+  const isVideoCallActive = Boolean(videoCallStatus?.active)
+  const videoCallCount = videoCallStatus?.count ?? 0
+  const onlineCount = onlineParticipants.length
+
+  const upsertOnlineParticipant = (
+    uid: string,
+    participant?: RoomParticipant,
+  ) => {
+    if (!participant) return
+    setOnlineParticipants((prev) => {
+      const exists = prev.some((p) => p.uid === uid)
+      if (exists) {
+        return prev.map((p) => (p.uid === uid ? participant : p))
+      }
+      return [...prev, participant]
+    })
+  }
+
+  const removeOnlineParticipant = (uid: string) => {
+    setOnlineParticipants((prev) => prev.filter((p) => p.uid !== uid))
+  }
 
   const handleEditName = async () => {
     if (!room || !newName.trim() || newName.trim() === room.name) return
@@ -233,6 +259,36 @@ export default function ChatPage() {
       console.error('[Chat]', payload.message)
     }
 
+    const resolveParticipant = (uid: string, participant?: RoomParticipant) =>
+      participant ?? participantsRef.current.find((p) => p.uid === uid)
+
+    const handleUserJoined = (payload: {
+      roomId: string
+      participant?: RoomParticipant
+      uid: string
+    }) => {
+      if (payload.roomId !== room.id) return
+      const resolved = resolveParticipant(payload.uid, payload.participant)
+      if (resolved) upsertOnlineParticipant(payload.uid, resolved)
+    }
+
+    const handleUserLeft = (payload: { uid: string }) => {
+      removeOnlineParticipant(payload.uid)
+    }
+
+    const handleRoomPresence = (payload: RoomPresencePayload) => {
+      if (payload.roomId !== room.id) return
+      const others = payload.users
+        .map((entry) => resolveParticipant(entry.uid, entry.participant))
+        .filter((participant): participant is RoomParticipant => Boolean(participant))
+      setOnlineParticipants([currentParticipant, ...others])
+    }
+
+    const handleVideoCallStatus = (payload: VideoCallStatus) => {
+      if (payload.roomId !== room.id) return
+      setVideoCallStatus(payload)
+    }
+
     const connectWithAuth = async () => {
       const token = await auth.currentUser?.getIdToken()
       if (!token) return
@@ -249,11 +305,19 @@ export default function ChatPage() {
     socket.on('chat-history', handleChatHistory)
     socket.on('new-message', handleNewMessage)
     socket.on('message-error', handleMessageError)
+    socket.on('user-joined', handleUserJoined)
+    socket.on('user-left', handleUserLeft)
+    socket.on('room-presence', handleRoomPresence)
+    socket.on('video-call-status', handleVideoCallStatus)
 
     return () => {
       socket.off('chat-history', handleChatHistory)
       socket.off('new-message', handleNewMessage)
       socket.off('message-error', handleMessageError)
+      socket.off('user-joined', handleUserJoined)
+      socket.off('user-left', handleUserLeft)
+      socket.off('room-presence', handleRoomPresence)
+      socket.off('video-call-status', handleVideoCallStatus)
       socket.off('connect', joinRoomSocket)
       socket.emit('leave-room', room.id)
       socket.disconnect()
