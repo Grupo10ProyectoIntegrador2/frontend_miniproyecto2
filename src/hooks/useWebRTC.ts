@@ -43,6 +43,73 @@ export function useWebRTC(
   const onPeerMetadataReceivedRef = useRef(onPeerMetadataReceived)
   onPeerMetadataReceivedRef.current = onPeerMetadataReceived
 
+  const removePeer = useCallback((socketId: string) => {
+    if (!socketId) return
+
+    const pc = peerConnections.current.get(socketId)
+    if (pc) {
+      pc.close()
+      peerConnections.current.delete(socketId)
+    }
+
+    makingOffer.current.delete(socketId)
+    ignoreOffer.current.delete(socketId)
+
+    dataChannels.current.get(socketId)?.close()
+    dataChannels.current.delete(socketId)
+    remoteCandidatesQueue.current.delete(socketId)
+
+    setPeerSocketIds(prev => {
+      if (!prev.has(socketId)) return prev
+      const next = new Set(prev)
+      next.delete(socketId)
+      return next
+    })
+
+    setRemoteStreams(prev => {
+      if (!prev.has(socketId)) return prev
+      const stream = prev.get(socketId)
+      stream?.getTracks().forEach(track => track.stop())
+      const next = new Map(prev)
+      next.delete(socketId)
+      return next
+    })
+  }, [])
+
+  const syncPeers = useCallback((activeSocketIds: Set<string>) => {
+    for (const socketId of peerConnections.current.keys()) {
+      if (!activeSocketIds.has(socketId)) {
+        removePeer(socketId)
+      }
+    }
+
+    setPeerSocketIds(prev => {
+      let changed = false
+      const next = new Set<string>()
+      for (const socketId of prev) {
+        if (activeSocketIds.has(socketId)) {
+          next.add(socketId)
+        } else {
+          changed = true
+        }
+      }
+      return changed ? next : prev
+    })
+
+    setRemoteStreams(prev => {
+      let changed = false
+      const next = new Map(prev)
+      for (const socketId of prev.keys()) {
+        if (!activeSocketIds.has(socketId)) {
+          prev.get(socketId)?.getTracks().forEach(track => track.stop())
+          next.delete(socketId)
+          changed = true
+        }
+      }
+      return changed ? next : prev
+    })
+  }, [removePeer])
+
 
   const isPolite = useCallback((targetSocketId: string): boolean => {
     return (socket.id ?? '') < targetSocketId
@@ -261,6 +328,9 @@ export function useWebRTC(
     }
     pc.onconnectionstatechange = () => {
       console.log(`[WebRTC] Connection state with ${targetSocketId}: ${pc.connectionState}`)
+      if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+        removePeer(targetSocketId)
+      }
     }
 
     const screenTrack = screenStreamRef.current?.getVideoTracks()[0]
@@ -319,7 +389,7 @@ export function useWebRTC(
     }
 
     return pc
-  }, [setupDataChannel]) // setupDataChannel is now stable (no deps)
+  }, [setupDataChannel, removePeer]) // setupDataChannel is now stable (no deps)
 
   // ── Socket event listeners – runs only once per roomId ─────────────
   useEffect(() => {
@@ -417,32 +487,7 @@ export function useWebRTC(
     const handleUserLeft = (payload: { socketId: string; uid: string }) => {
       if (!payload.socketId) return
       console.log(`[WebRTC] User left: ${payload.socketId}`)
-      
-      const pc = peerConnections.current.get(payload.socketId)
-      if (pc) {
-        pc.close()
-        peerConnections.current.delete(payload.socketId)
-      }
-      
-      // Clean up Perfect Negotiation state
-      makingOffer.current.delete(payload.socketId)
-      ignoreOffer.current.delete(payload.socketId)
-
-      dataChannels.current.get(payload.socketId)?.close()
-      dataChannels.current.delete(payload.socketId)
-      remoteCandidatesQueue.current.delete(payload.socketId)
-
-      setPeerSocketIds(prev => {
-        const next = new Set(prev)
-        next.delete(payload.socketId)
-        return next
-      })
-
-      setRemoteStreams((prev) => {
-        const newMap = new Map(prev)
-        newMap.delete(payload.socketId)
-        return newMap
-      })
+      removePeer(payload.socketId)
     }
 
     socket.on('user-joined', handleUserJoined)
@@ -458,7 +503,7 @@ export function useWebRTC(
       socket.off('candidate', handleCandidate)
       socket.off('user-left', handleUserLeft)
     }
-  }, [roomId, createPeerConnection, setupDataChannel, processQueuedCandidates, isPolite])
+  }, [roomId, createPeerConnection, setupDataChannel, processQueuedCandidates, isPolite, removePeer])
 
   // Cleanup on unmount
   useEffect(() => {
@@ -511,5 +556,6 @@ export function useWebRTC(
     stopScreenShare,
     toggleScreenShare,
     permissionError,
+    syncPeers,
   }
 }
