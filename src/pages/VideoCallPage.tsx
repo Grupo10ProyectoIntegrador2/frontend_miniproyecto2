@@ -94,16 +94,24 @@ function VideoBox({
   stream,
   isLocal,
   name,
+  displayName,
+  uid = '',
+  avatarUrl,
   isAudioMuted,
   isVideoMuted = false,
   isScreenSharing = false,
+  cameraOn,
 }: {
   stream: MediaStream | null
   isLocal: boolean
   name: string
+  displayName?: string
+  uid?: string
+  avatarUrl?: string
   isAudioMuted?: boolean
   isVideoMuted?: boolean
   isScreenSharing?: boolean
+  cameraOn?: boolean
 }) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [hasVideo, setHasVideo] = useState(false)
@@ -284,7 +292,7 @@ export default function VideoCallPage() {
   const callParticipants = useMemo(() => {
     const byUid = new Map<string, RoomParticipant>()
 
-    for (const participant of videoCallParticipants) {
+    for (const participant of participants) {
       byUid.set(participant.uid, participant)
     }
 
@@ -292,14 +300,8 @@ export default function VideoCallPage() {
       byUid.set(localParticipant.uid, localParticipant)
     }
 
-    for (const uid of activeSockets.values()) {
-      if (byUid.has(uid)) continue
-      const participant = participants.find((p) => p.uid === uid)
-      if (participant) byUid.set(uid, participant)
-    }
-
     return Array.from(byUid.values())
-  }, [videoCallParticipants, localParticipant, activeSockets, participants])
+  }, [localParticipant, participants])
 
   const handlePeerMetadataReceived = useCallback((socketId: string, uid: string, participant: RoomParticipant) => {
     setVideoCallPeers(prev => {
@@ -318,6 +320,20 @@ export default function VideoCallPage() {
     setParticipants(prev => {
       const exists = prev.some(p => p.uid === uid)
       return exists ? prev : [...prev, participant]
+    })
+  }, [])
+
+  const handlePeerMediaStatusReceived = useCallback((socketId: string, uid: string, isAudioMuted: boolean, cameraOn: boolean) => {
+    setVideoCallPeers(prev => {
+      const existing = prev.get(socketId)
+      if (!existing) return prev
+      const next = new Map(prev)
+      next.set(socketId, {
+        ...existing,
+        audioMuted: isAudioMuted,
+        videoMuted: !cameraOn
+      })
+      return next
     })
   }, [])
 
@@ -666,9 +682,13 @@ export default function VideoCallPage() {
                 stream={isScreenSharing && screenStream ? screenStream : localStream}
                 isLocal={true}
                 name={`Tú (${userFullName})`}
+                displayName={userFullName}
+                uid={user?.uid}
+                avatarUrl={user?.avatarUrl}
                 isAudioMuted={!micEnabled}
                 isVideoMuted={!cameraEnabled && !isScreenSharing}
                 isScreenSharing={isScreenSharing}
+                cameraOn={cameraEnabled}
               />
             </div>
             
@@ -692,9 +712,13 @@ export default function VideoCallPage() {
                     stream={stream}
                     isLocal={false}
                     name={name}
+                    displayName={name}
+                    uid={uid}
+                    avatarUrl={participant?.avatarUrl}
                     isAudioMuted={remoteAv?.audioMuted}
                     isVideoMuted={remoteAv?.videoMuted && !remoteIsSharing}
                     isScreenSharing={remoteIsSharing}
+                    cameraOn={remoteAv ? !remoteAv.videoMuted : true}
                   />
                 </div>
               )
