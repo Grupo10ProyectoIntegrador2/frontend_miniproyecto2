@@ -6,19 +6,9 @@ import {
   AlertCircle,
   ArrowLeft,
   BookOpen,
-  MessageSquare,
-  Users,
-  FolderOpen,
-  FileText,
-  Phone,
   Mic,
-  HelpCircle,
-  LogOut,
   Smile,
   PlusCircle,
-  Bell,
-  Settings,
-  Video,
   Copy,
   Edit2,
   Check,
@@ -46,8 +36,6 @@ interface ChatMessage {
   content: string
   createdAt: string
 }
-
-type NavTab = 'chat' | 'participantes' | 'archivos' | 'notas'
 
 /* ─────────────── Helpers ─────────────── */
 
@@ -122,7 +110,6 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [sending, setSending] = useState(false)
-  const [activeNav, setActiveNav] = useState<NavTab>('chat')
   const [copied, setCopied] = useState(false)
   
   // Room Management states
@@ -363,7 +350,7 @@ export default function ChatPage() {
   /* ── Loading state ── */
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+      <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
         <Loader2 className="mr-2 h-6 w-6 animate-spin text-blue-600" />
         <span className="text-sm text-slate-500 dark:text-slate-400">Abriendo chat...</span>
       </div>
@@ -373,7 +360,7 @@ export default function ChatPage() {
   /* ── Error state ── */
   if (error || !room) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-slate-50 dark:bg-slate-950 p-4">
+      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-slate-50 dark:bg-slate-950 p-4 transition-colors duration-200">
         <AlertCircle className="h-10 w-10 text-red-500" />
         <h1 className="text-xl font-bold text-slate-900 dark:text-white">
           No se pudo abrir el chat
@@ -390,14 +377,6 @@ export default function ChatPage() {
       </div>
     )
   }
-
-  /* ── Nav items ── */
-  const navItems: { id: NavTab; label: string; Icon: React.FC<{ size?: number }> }[] = [
-    { id: 'chat', label: 'Chat Principal', Icon: MessageSquare },
-    { id: 'participantes', label: 'Participantes', Icon: Users },
-    { id: 'archivos', label: 'Archivos Compartidos', Icon: FolderOpen },
-    { id: 'notas', label: 'Notas', Icon: FileText },
-  ]
 
   const userFullName = user
     ? `${user.firstName} ${user.lastName}`.trim() || user.username
@@ -416,7 +395,7 @@ export default function ChatPage() {
       <div className="flex flex-1 overflow-hidden">
 
         {/* ──────────── LEFT SIDEBAR ──────────── */}
-        <aside className="flex w-52 shrink-0 flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+        <aside className="flex w-52 shrink-0 flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 transition-colors duration-200">
           {/* Room card */}
           <div className="m-3 mb-2">
             <div className="rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 p-3 text-white shadow-sm">
@@ -435,11 +414,11 @@ export default function ChatPage() {
           </div>
 
           {/* GESTIÓN DE SALA */}
-          <div className="mx-3 mb-4 rounded-xl border border-slate-100 bg-slate-50 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/60">
+          <div className="mx-3 mb-4 rounded-xl border border-slate-100 bg-slate-50 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800/50">
             <div className="mb-3 flex items-center justify-between">
               <span className="text-[10px] font-bold tracking-wider text-slate-500 dark:text-slate-400">GESTIÓN DE SALA</span>
               {isOwner && (
-                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
                   PROPIETARIO
                 </span>
               )}
@@ -451,7 +430,7 @@ export default function ChatPage() {
                 <div className="flex items-center gap-1">
                   <button 
                     onClick={() => { setNewName(room.name); setEditingName(true); }}
-                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700 transition-colors dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200 transition-colors"
                     title="Editar nombre"
                   >
                     <Edit2 size={14} />
@@ -459,7 +438,7 @@ export default function ChatPage() {
                   <button 
                     onClick={handleDeleteRoom}
                     disabled={deleting}
-                    className="rounded-lg p-1.5 text-slate-400 hover:bg-red-100 hover:text-red-600 transition-colors disabled:opacity-50 dark:hover:bg-red-950/40 dark:hover:text-red-400"
+                    className="rounded-lg p-1.5 text-slate-400 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400 transition-colors disabled:opacity-50"
                     title="Eliminar sala"
                   >
                     <Trash2 size={14} />
@@ -474,7 +453,7 @@ export default function ChatPage() {
                 <span className="text-sm font-bold text-blue-600 dark:text-blue-400 truncate max-w-[120px]">#{room.id.substring(0, 8).toUpperCase()}</span>
                 <button 
                   onClick={handleCopyId}
-                  className="text-blue-600 hover:text-blue-800 transition-colors"
+                  className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
                   title="Copiar ID completo"
                 >
                   {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
@@ -483,101 +462,37 @@ export default function ChatPage() {
             </div>
           </div>
 
-          {/* Navigation */}
-          <nav className="flex flex-col gap-0.5 px-2 pt-1">
-            {navItems.map(({ id, label, Icon }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setActiveNav(id)}
-                className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[13px] transition-all duration-150 ${
-                  activeNav === id
-                    ? 'bg-blue-600 font-semibold text-white shadow-sm'
-                    : 'font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
-                }`}
-              >
-                <Icon size={15} />
-                {label}
-              </button>
-            ))}
-          </nav>
-
           <div className="flex-1" />
 
-          {/* Unirse al Debate */}
-          <div className="px-3 pb-3">
-            <button
-              type="button"
-              onClick={() => navigate(`/salas/${roomId}/video`)}
-              className={`flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl py-2.5 text-[13px] font-semibold text-white shadow-sm transition-colors active:scale-[0.98] ${
-                isVideoCallActive
-                  ? 'bg-emerald-600 hover:bg-emerald-700'
-                  : 'bg-blue-600 hover:bg-blue-700'
-              }`}
-            >
-              <MessageSquare size={14} />
-              {isVideoCallActive ? 'Unirse al Debate' : 'Iniciar Debate'}
-            </button>
-          </div>
-
-          {/* Bottom links */}
-          <div className="flex flex-col gap-0.5 border-t border-slate-100 dark:border-slate-800 px-3 py-3">
-            <button
-              type="button"
-              className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
-            >
-              <HelpCircle size={14} />
-              Soporte
-            </button>
+          <div className="border-t border-slate-100 px-3 py-3 dark:border-slate-800">
             <button
               type="button"
               onClick={() => navigate('/dashboard')}
-              className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] text-red-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30 dark:hover:text-red-400"
+              className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-2.5 text-[13px] font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
             >
-              <LogOut size={14} />
-              Salir
+              <ArrowLeft size={14} />
+              Volver al dashboard
             </button>
           </div>
         </aside>
 
         {/* ──────────── MAIN CHAT ──────────── */}
-        <main className="flex flex-1 flex-col overflow-hidden bg-slate-50/50 dark:bg-slate-950/50 p-4 gap-4">
+        <main className="flex flex-1 flex-col overflow-hidden bg-slate-50/50 dark:bg-slate-950/50 p-4 gap-4 transition-colors duration-200">
           
-          {/* Top Card: Video Call */}
-          <div className={`flex shrink-0 items-center justify-between rounded-2xl border px-6 py-6 shadow-sm relative min-h-[96px] ${
-            isVideoCallActive
-              ? 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-900/40 dark:bg-emerald-950/20'
-              : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900'
-          }`}>
-            <div className={`absolute left-6 flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-2xl shadow-md ${
-              isVideoCallActive ? 'bg-emerald-600' : 'bg-blue-600'
-            }`}>
-              <Video size={28} className="text-white" />
-            </div>
-            <div className="flex flex-1 flex-col items-center gap-2 pl-20 sm:pl-24">
-              {isVideoCallActive && (
-                <div className="flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                  Videollamada activa · {videoCallCount} {videoCallCount === 1 ? 'participante' : 'participantes'}
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={() => navigate(`/salas/${roomId}/video`)}
-                className={`flex items-center gap-2 rounded-xl px-8 py-3 text-sm font-semibold text-white shadow-sm transition-colors active:scale-[0.98] ${
-                  isVideoCallActive
-                    ? 'bg-emerald-600 hover:bg-emerald-700'
-                    : 'bg-[#0047E1] hover:bg-blue-800'
-                }`}
-              >
-                <Play size={16} className="fill-current" />
-                {isVideoCallActive ? 'Unirse a la videollamada' : 'Iniciar una videollamada'}
-              </button>
-            </div>
+          {/* Top Card: Start Video Call */}
+          <div className="flex shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 px-6 py-6 shadow-sm min-h-[96px] transition-colors duration-200">
+            <button
+              type="button"
+              onClick={() => navigate(`/salas/${roomId}/video`)}
+              className="flex items-center gap-2 rounded-xl bg-[#0047E1] px-8 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-800 active:scale-[0.98]"
+            >
+              <Play size={16} className="fill-current" />
+              Iniciar una videollamada
+            </button>
           </div>
 
           {/* Chat Container Card */}
-          <div className="flex flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm">
+          <div className="flex flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm transition-colors duration-200">
             {/* Header inside chat container */}
             <div className="flex shrink-0 items-center justify-between border-b border-slate-100 dark:border-slate-800 px-6 py-4">
               <div className="flex items-center gap-4">
@@ -586,17 +501,14 @@ export default function ChatPage() {
                 </div>
                 <div>
                   <h2 className="text-[15px] font-bold text-slate-900 dark:text-white leading-tight">{room.name}</h2>
-                  <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    {onlineCount} {onlineCount === 1 ? 'participante activo' : 'participantes activos'}
-                    {isVideoCallActive && ` · ${videoCallCount} en videollamada`}
-                  </p>
+                  <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-0.5">{participants.length} participantes activos</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button className="rounded-full p-2.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors dark:hover:bg-slate-800 dark:hover:text-slate-200">
+                <button className="rounded-full p-2.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors">
                   <Search size={20} />
                 </button>
-                <button className="rounded-full p-2.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors dark:hover:bg-slate-800 dark:hover:text-slate-200">
+                <button className="rounded-full p-2.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors">
                   <MoreVertical size={20} />
                 </button>
               </div>
@@ -670,11 +582,11 @@ export default function ChatPage() {
                           {/* Meta row */}
                           {showSenderInfo && !isOwn && (
                             <div className="mb-1 flex items-center gap-1.5 px-0.5">
-                              <span className="text-[13px] font-semibold text-slate-700 dark:text-slate-200">
+                              <span className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">
                                 {msg.senderName}
                               </span>
                               {participantRole === 'Administrador' && (
-                                <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-950/50 dark:text-blue-300">
+                                <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-950/50 dark:text-blue-400">
                                   ADMINISTRADOR
                                 </span>
                               )}
@@ -706,7 +618,7 @@ export default function ChatPage() {
                             className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed shadow-sm ${
                               isOwn
                                 ? 'rounded-tr-sm bg-blue-600 text-white'
-                                : 'rounded-tl-sm border border-slate-100 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100'
+                                : 'rounded-tl-sm border border-slate-100 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'
                             }`}
                           >
                             {msg.content}
@@ -722,7 +634,7 @@ export default function ChatPage() {
           </div>
 
           {/* ── Message input ── */}
-          <div className="shrink-0 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-5 py-3">
+          <div className="shrink-0 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-5 py-3 transition-colors duration-200">
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -741,7 +653,7 @@ export default function ChatPage() {
                 onKeyDown={handleKeyDown}
                 placeholder="Escribe un mensaje aquí..."
                 maxLength={2000}
-                className="flex-1 rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-4 pr-4 text-sm text-slate-900 placeholder-slate-400 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder-slate-500 dark:focus:border-blue-500 dark:focus:ring-blue-950/50"
+                className="flex-1 rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-4 pr-4 text-sm text-slate-900 placeholder-slate-400 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder-slate-500 dark:focus:border-blue-500 dark:focus:ring-blue-900/30"
               />
 
               <button
@@ -771,27 +683,27 @@ export default function ChatPage() {
         </main>
 
         {/* ──────────── RIGHT SIDEBAR ──────────── */}
-        <aside className="flex w-72 shrink-0 flex-col border-l border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+        <aside className="flex w-72 shrink-0 flex-col border-l border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 transition-colors duration-200">
           {/* Participants header */}
           <div className="px-4 pb-3 pt-4">
             <div className="flex items-center justify-between">
               <h2 className="text-[15px] font-bold text-slate-900 dark:text-white">
                 Participantes
               </h2>
-              <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
-                {onlineCount} ONLINE
+              <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
+                {participants.length} ONLINE
               </span>
             </div>
           </div>
 
           {/* Participants list */}
-          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 pb-3">
-            {onlineCount === 0 && (
+          <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 pb-4">
+            {participants.length === 0 && (
               <p className="text-[12px] text-slate-400 dark:text-slate-500">
-                Sin participantes conectados.
+                Sin participantes cargados.
               </p>
             )}
-            {onlineParticipants.map((p) => {
+            {participants.map((p) => {
               const fullName =
                 `${p.firstName} ${p.lastName}`.trim() || p.username
               const color = avatarColor(p.uid)
@@ -819,19 +731,6 @@ export default function ChatPage() {
               )
             })}
           </div>
-
-          <div className="mx-4 h-px shrink-0 bg-slate-100 dark:bg-slate-800" />
-
-          <div className="shrink-0 px-4 py-4">
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/40 dark:bg-amber-950/20">
-              <p className="text-[12px] font-semibold text-amber-800 dark:text-amber-300">
-                Nota de la sesión
-              </p>
-              <p className="mt-1 text-[11px] italic leading-relaxed text-amber-700 dark:text-amber-400/90">
-                Mensajes en tiempo real. Historial guardado durante la sesión. Máx. 2000 caracteres por mensaje.
-              </p>
-            </div>
-          </div>
         </aside>
       </div>
 
@@ -845,14 +744,14 @@ export default function ChatPage() {
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               maxLength={50}
-                className="mt-4 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:ring-blue-950/50"
+              className="mt-4 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:ring-blue-900/30"
               autoFocus
             />
             <div className="mt-5 flex justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setEditingName(false)}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
               >
                 Cancelar
               </button>

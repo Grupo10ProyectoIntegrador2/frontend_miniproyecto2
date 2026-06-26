@@ -16,7 +16,7 @@ import {
 import { useAuth } from '../contexts/useAuth'
 import { auth } from '../lib/firebase'
 import { useWebRTC } from '../hooks/useWebRTC'
-import { joinRoom, getRoomParticipants } from '../services/rooms.service'
+import { joinRoom } from '../services/rooms.service'
 import { socket } from '../lib/socket'
 import DashboardHeader from '../components/DashboardHeader'
 import type { Room, RoomParticipant } from '../types/room.types'
@@ -30,6 +30,14 @@ interface ChatMessage {
   senderUsername: string
   content: string
   createdAt: string
+}
+
+interface VideoCallPeerState {
+  uid: string
+  socketId: string
+  audioMuted: boolean
+  videoMuted: boolean
+  isScreenSharing: boolean
 }
 
 function getInitials(name: string): string {
@@ -90,6 +98,8 @@ function VideoBox({
   uid = '',
   avatarUrl,
   isAudioMuted,
+  isVideoMuted = false,
+  isScreenSharing = false,
   cameraOn,
 }: {
   stream: MediaStream | null
@@ -99,6 +109,8 @@ function VideoBox({
   uid?: string
   avatarUrl?: string
   isAudioMuted?: boolean
+  isVideoMuted?: boolean
+  isScreenSharing?: boolean
   cameraOn?: boolean
 }) {
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -110,51 +122,56 @@ function VideoBox({
 
   useEffect(() => {
     const el = videoRef.current
-    if (el && stream) {
-      el.srcObject = stream
-      
-      const checkVideoTrack = () => {
-        const videoTrack = stream.getVideoTracks()[0]
-        setHasVideo(!!videoTrack && videoTrack.enabled && videoTrack.readyState === 'live')
-      }
-      
-      checkVideoTrack()
+    if (!el) return
 
-      // Autoplay policy: browsers block unmuted autoplay.
-      // Start muted, play, then unmute remote streams for audio.
-      el.muted = true
-      el.play()
-        .then(() => {
-          if (!isLocal) el.muted = false
-        })
-        .catch(() => {
-          // Stays muted if autoplay still blocked
-        })
+    if (!stream) {
+      el.srcObject = null
+      setHasVideo(false)
+      return
+    }
+
+    el.srcObject = stream
       
-      // Listen to track changes
-      stream.onaddtrack = checkVideoTrack
-      stream.onremovetrack = checkVideoTrack
+    const checkVideoTrack = () => {
+      const videoTrack = stream.getVideoTracks()[0]
+      const trackLive = !!videoTrack && videoTrack.enabled && videoTrack.readyState === 'live'
+      setHasVideo(trackLive && !isVideoMuted)
+    }
       
-      const videoTracks = stream.getVideoTracks()
-      videoTracks.forEach(track => {
-        track.onmute = checkVideoTrack
-        track.onunmute = checkVideoTrack
-        track.onended = checkVideoTrack
+    checkVideoTrack()
+
+    // Autoplay policy: browsers block unmuted autoplay.
+    // Start muted, play, then unmute remote streams for audio.
+    el.muted = true
+    el.play()
+      .then(() => {
+        if (!isLocal) el.muted = false
+      })
+      .catch(() => {
+        // Stays muted if autoplay still blocked
       })
       
-      return () => {
-        stream.onaddtrack = null
-        stream.onremovetrack = null
-        videoTracks.forEach(track => {
-          track.onmute = null
-          track.onunmute = null
-          track.onended = null
-        })
-      }
-    } else {
-      setHasVideo(false)
+    // Listen to track changes
+    stream.onaddtrack = checkVideoTrack
+    stream.onremovetrack = checkVideoTrack
+      
+    const videoTracks = stream.getVideoTracks()
+    videoTracks.forEach(track => {
+      track.onmute = checkVideoTrack
+      track.onunmute = checkVideoTrack
+      track.onended = checkVideoTrack
+    })
+      
+    return () => {
+      stream.onaddtrack = null
+      stream.onremovetrack = null
+      videoTracks.forEach(track => {
+        track.onmute = null
+        track.onunmute = null
+        track.onended = null
+      })
     }
-  }, [stream, isLocal])
+  }, [stream, isLocal, isVideoMuted])
 
   return (
     <div
@@ -167,8 +184,12 @@ function VideoBox({
         ref={videoRef}
         autoPlay
         playsInline
-        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${
-          showAvatar ? 'opacity-0' : 'opacity-100'
+        className={`absolute inset-0 h-full w-full transition-opacity duration-300 ${
+          hasVideo
+            ? isScreenSharing
+              ? 'object-contain opacity-100'
+              : 'object-cover opacity-100'
+            : 'object-cover opacity-0'
         }`}
       />
       
@@ -197,9 +218,37 @@ function VideoBox({
         <span className="text-xs font-medium text-white">{name}</span>
       </div>
       
-      {isAudioMuted && (
-        <div className="absolute right-3 top-3 flex items-center justify-center rounded-full bg-red-500/90 p-1.5 backdrop-blur-md">
-          <MicOff size={14} className="text-white" />
+      {isScreenSharing && (
+        <div className="absolute right-3 top-3 flex flex-col items-end gap-1.5">
+          <div className="flex items-center gap-1 rounded-full bg-blue-600/90 px-2 py-1 backdrop-blur-md">
+            <MonitorUp size={12} className="text-white" />
+            <span className="text-[10px] font-medium text-white">Presentando</span>
+          </div>
+          {isAudioMuted && (
+            <div className="flex items-center justify-center rounded-full bg-red-500/90 p-1.5 backdrop-blur-md">
+              <MicOff size={14} className="text-white" />
+            </div>
+          )}
+          {isVideoMuted && (
+            <div className="flex items-center justify-center rounded-full bg-slate-700/90 p-1.5 backdrop-blur-md">
+              <VideoOff size={14} className="text-white" />
+            </div>
+          )}
+        </div>
+      )}
+
+      {!isScreenSharing && (isAudioMuted || isVideoMuted) && (
+        <div className="absolute right-3 top-3 flex flex-col items-end gap-1.5">
+          {isAudioMuted && (
+            <div className="flex items-center justify-center rounded-full bg-red-500/90 p-1.5 backdrop-blur-md">
+              <MicOff size={14} className="text-white" />
+            </div>
+          )}
+          {isVideoMuted && (
+            <div className="flex items-center justify-center rounded-full bg-slate-700/90 p-1.5 backdrop-blur-md">
+              <VideoOff size={14} className="text-white" />
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -213,11 +262,7 @@ export default function VideoCallPage() {
   
   const [room, setRoom] = useState<Room | null>(null)
   const [participants, setParticipants] = useState<RoomParticipant[]>([])
-  const [videoCallParticipants, setVideoCallParticipants] = useState<RoomParticipant[]>([])
-  
-  // Mapeo de SocketId a UID para identificar a los remotos
-  const [activeSockets, setActiveSockets] = useState<Map<string, string>>(new Map())
-  const [remoteMediaStatus, setRemoteMediaStatus] = useState<Record<string, { isAudioMuted: boolean, cameraOn: boolean }>>({})
+  const [videoCallPeers, setVideoCallPeers] = useState<Map<string, VideoCallPeerState>>(new Map())
   
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [newMessage, setNewMessage] = useState('')
@@ -247,7 +292,7 @@ export default function VideoCallPage() {
   const callParticipants = useMemo(() => {
     const byUid = new Map<string, RoomParticipant>()
 
-    for (const participant of videoCallParticipants) {
+    for (const participant of participants) {
       byUid.set(participant.uid, participant)
     }
 
@@ -255,19 +300,21 @@ export default function VideoCallPage() {
       byUid.set(localParticipant.uid, localParticipant)
     }
 
-    for (const uid of activeSockets.values()) {
-      if (byUid.has(uid)) continue
-      const participant = participants.find((p) => p.uid === uid)
-      if (participant) byUid.set(uid, participant)
-    }
-
     return Array.from(byUid.values())
-  }, [videoCallParticipants, localParticipant, activeSockets, participants])
+  }, [localParticipant, participants])
 
   const handlePeerMetadataReceived = useCallback((socketId: string, uid: string, participant: RoomParticipant) => {
-    setActiveSockets(prev => {
+    setVideoCallPeers(prev => {
+      const existing = prev.get(socketId)
+      if (existing) return prev
       const next = new Map(prev)
-      next.set(socketId, uid)
+      next.set(socketId, {
+        uid,
+        socketId,
+        audioMuted: false,
+        videoMuted: false,
+        isScreenSharing: false,
+      })
       return next
     })
     setParticipants(prev => {
@@ -277,13 +324,32 @@ export default function VideoCallPage() {
   }, [])
 
   const handlePeerMediaStatusReceived = useCallback((socketId: string, uid: string, isAudioMuted: boolean, cameraOn: boolean) => {
-    setRemoteMediaStatus(prev => ({
-      ...prev,
-      [uid]: { isAudioMuted, cameraOn }
-    }))
+    setVideoCallPeers(prev => {
+      const existing = prev.get(socketId)
+      if (!existing) return prev
+      const next = new Map(prev)
+      next.set(socketId, {
+        ...existing,
+        audioMuted: isAudioMuted,
+        videoMuted: !cameraOn
+      })
+      return next
+    })
   }, [])
 
-  const { localStream, remoteStreams, peerSocketIds, startLocalStream, stopLocalStream, toggleMic, toggleCamera, permissionError } = useWebRTC(
+  const {
+    localStream,
+    screenStream,
+    remoteStreams,
+    isScreenSharing,
+    startLocalStream,
+    stopLocalStream,
+    toggleMic,
+    toggleCamera,
+    toggleScreenShare,
+    permissionError,
+    syncPeers,
+  } = useWebRTC(
     roomId!,
     user?.uid || '',
     localParticipant,
@@ -305,8 +371,6 @@ export default function VideoCallPage() {
       try {
         const r = await joinRoom(roomId!)
         if (!cancelled) setRoom(r)
-        const ps = await getRoomParticipants(roomId!)
-        if (!cancelled) setParticipants(ps)
       } catch (err: unknown) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Error al cargar.')
       } finally {
@@ -344,23 +408,62 @@ export default function VideoCallPage() {
 
     const handleUserJoined = (payload: { roomId: string, participant: RoomParticipant, socketId: string, uid: string }) => {
       if (payload.roomId !== room.id) return
+      if (payload.uid === user.uid) return
       setParticipants(prev => {
         const exists = prev.some(p => p.uid === payload.uid)
         return exists ? prev : [...prev, payload.participant]
       })
-      setActiveSockets(prev => {
-        const next = new Map(prev)
-        next.set(payload.socketId, payload.uid)
-        return next
-      })
     }
 
     const handleUserLeft = (payload: { socketId: string, uid: string }) => {
-      setActiveSockets(prev => {
+      setVideoCallPeers(prev => {
+        if (!prev.has(payload.socketId)) return prev
         const next = new Map(prev)
         next.delete(payload.socketId)
         return next
       })
+      if (payload.uid) {
+        setParticipants(prev => prev.filter(p => p.uid !== payload.uid))
+      }
+    }
+
+    const applyVideoCallStatus = (payload: {
+      roomId: string
+      participants?: RoomParticipant[]
+      states?: Array<{
+        uid: string
+        socketId: string
+        audioMuted: boolean
+        videoMuted: boolean
+        isScreenSharing: boolean
+      }>
+    }) => {
+      if (payload.roomId !== room.id) return
+
+      const peers = new Map<string, VideoCallPeerState>()
+      const activeSocketIds = new Set<string>()
+
+      payload.states?.forEach((state) => {
+        if (!state.socketId) return
+        activeSocketIds.add(state.socketId)
+        peers.set(state.socketId, {
+          uid: state.uid,
+          socketId: state.socketId,
+          audioMuted: state.audioMuted,
+          videoMuted: state.videoMuted,
+          isScreenSharing: state.isScreenSharing,
+        })
+      })
+
+      setVideoCallPeers(peers)
+      syncPeers(activeSocketIds)
+
+      if (payload.participants && payload.participants.length > 0) {
+        setParticipants(payload.participants)
+      } else if (payload.states) {
+        const uidsInCall = new Set(payload.states.map((state) => state.uid))
+        setParticipants(prev => prev.filter(p => uidsInCall.has(p.uid)))
+      }
     }
 
     const handleChatHistory = (payload: { roomId: string; messages: ChatMessage[] }) => {
@@ -375,14 +478,59 @@ export default function VideoCallPage() {
       }, 100)
     }
 
-    const handleVideoCallStatus = (payload: VideoCallStatus) => {
-      if (payload.roomId !== room.id) return
-      setVideoCallParticipants(payload.participants ?? [])
+    const handleVideoCallStatus = (payload: {
+      roomId: string
+      participants?: RoomParticipant[]
+      states?: Array<{
+        uid: string
+        socketId: string
+        audioMuted: boolean
+        videoMuted: boolean
+        isScreenSharing: boolean
+      }>
+    }) => {
+      applyVideoCallStatus(payload)
     }
 
-    // Iniciar stream local Y sockets en paralelo.
-    // Si getUserMedia falla (cámara en uso, permisos denegados, etc.),
-    // los sockets se conectan de todos modos para recibir video/audio remoto.
+    const handleScreenShareChanged = (payload: {
+      uid: string
+      socketId: string
+      isScreenSharing: boolean
+    }) => {
+      setVideoCallPeers(prev => {
+        const next = new Map(prev)
+        for (const [socketId, peer] of next) {
+          if (peer.uid === payload.uid) {
+            next.set(socketId, { ...peer, isScreenSharing: payload.isScreenSharing })
+          }
+        }
+        return next
+      })
+    }
+
+    const handleAvStateChanged = (payload: {
+      uid: string
+      socketId: string
+      audioMuted: boolean
+      videoMuted: boolean
+    }) => {
+      setVideoCallPeers(prev => {
+        const next = new Map(prev)
+        for (const [socketId, peer] of next) {
+          if (peer.uid === payload.uid) {
+            next.set(socketId, {
+              ...peer,
+              audioMuted: payload.audioMuted,
+              videoMuted: payload.videoMuted,
+            })
+          }
+        }
+        return next
+      })
+    }
+
+    // Iniciar stream ANTES de conectar sockets para que los tracks
+    // locales estén disponibles cuando lleguen eventos user-joined
     const init = async () => {
       // Start both in parallel – socket connection should NOT depend on media access
       const [stream] = await Promise.all([
@@ -401,6 +549,8 @@ export default function VideoCallPage() {
     socket.on('chat-history', handleChatHistory)
     socket.on('new-message', handleNewMessage)
     socket.on('video-call-status', handleVideoCallStatus)
+    socket.on('screen-share-changed', handleScreenShareChanged)
+    socket.on('av-state-changed', handleAvStateChanged)
 
     return () => {
       socket.off('user-joined', handleUserJoined)
@@ -408,13 +558,15 @@ export default function VideoCallPage() {
       socket.off('chat-history', handleChatHistory)
       socket.off('new-message', handleNewMessage)
       socket.off('video-call-status', handleVideoCallStatus)
+      socket.off('screen-share-changed', handleScreenShareChanged)
+      socket.off('av-state-changed', handleAvStateChanged)
       socket.off('connect')
       socket.emit('leave-video-call', { roomId: room.id })
       socket.emit('leave-room', room.id)
       socket.disconnect()
       stopLocalStream()
     }
-  }, [room, user, startLocalStream, stopLocalStream, localParticipant])
+  }, [room, user, startLocalStream, stopLocalStream, localParticipant, syncPeers])
 
   const handleSendMessage = () => {
     const trimmed = newMessage.trim()
@@ -430,14 +582,25 @@ export default function VideoCallPage() {
     }
   }
 
+  const emitAvState = (audioMuted: boolean, videoMuted: boolean) => {
+    if (!room) return
+    socket.emit('toggle-av', { roomId: room.id, audioMuted, videoMuted })
+  }
+
   const handleMicToggle = () => {
     const state = toggleMic()
     setMicEnabled(state)
+    emitAvState(!state, !cameraEnabled)
   }
 
   const handleCameraToggle = () => {
     const state = toggleCamera()
     setCameraEnabled(state)
+    emitAvState(!micEnabled, !state)
+  }
+
+  const handleScreenShareToggle = async () => {
+    await toggleScreenShare()
   }
 
   const leaveCall = () => {
@@ -447,9 +610,15 @@ export default function VideoCallPage() {
     navigate(`/salas/${roomId}/chat`)
   }
 
+  const allRemoteSocketIds = useMemo(() => {
+    return Array.from(videoCallPeers.entries())
+      .filter(([, peer]) => peer.uid !== user?.uid)
+      .map(([socketId]) => socketId)
+  }, [videoCallPeers, user?.uid])
+
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-50">
+      <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
         <Loader2 className="mr-2 h-6 w-6 animate-spin text-blue-600" />
       </div>
     )
@@ -457,48 +626,37 @@ export default function VideoCallPage() {
   
   if (error || !room) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center bg-slate-50 p-4">
+      <div className="flex h-screen flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 p-4 transition-colors duration-200">
         <AlertCircle className="h-10 w-10 text-red-500 mb-4" />
-        <h1 className="text-xl font-bold">Error</h1>
-        <p className="text-slate-500 mb-4">{error || 'No se pudo cargar.'}</p>
-        <button onClick={leaveCall} className="rounded-xl bg-blue-600 px-5 py-2.5 text-white">Volver</button>
+        <h1 className="text-xl font-bold text-slate-900 dark:text-white">Error</h1>
+        <p className="text-slate-500 dark:text-slate-400 mb-4">{error || 'No se pudo cargar.'}</p>
+        <button onClick={leaveCall} className="rounded-xl bg-blue-600 px-5 py-2.5 text-white hover:bg-blue-700">Volver</button>
       </div>
     )
   }
 
   const userFullName = user ? `${user.firstName} ${user.lastName}`.trim() || user.username : ''
 
-  // Build set of remote participants (with or without video)
-  // Combine remote streams + activeSockets + peerSocketIds to show participants even without camera
-  const allRemoteSocketIds = new Set([
-    ...Array.from(remoteStreams.keys()),
-    ...Array.from(activeSockets.keys()),
-    ...Array.from(peerSocketIds)
-  ])
-
-  // Cálculos para la cuadrícula
-  const totalVideos = allRemoteSocketIds.size + 1 // Remotos + Local
+  const totalVideos = allRemoteSocketIds.length + 1
   const gridColumns = totalVideos === 1 ? 'grid-cols-1' :
                       totalVideos === 2 ? 'grid-cols-1 md:grid-cols-2' :
                       totalVideos <= 4 ? 'grid-cols-2' :
                       totalVideos <= 6 ? 'grid-cols-2 md:grid-cols-3' : 'grid-cols-3'
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-slate-50 font-sans">
-      {/* Header — same DashboardHeader used in other views */}
+    <div className="flex h-screen flex-col overflow-hidden bg-slate-50 dark:bg-slate-950 font-sans transition-colors duration-200">
       <DashboardHeader fullWidth={true} />
 
-      {/* Sub-header: back link + live badge */}
-      <div className="flex h-10 shrink-0 items-center gap-4 border-b border-slate-100 bg-white px-6">
+      <div className="flex h-10 shrink-0 items-center gap-4 border-b border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-900 px-6 transition-colors duration-200">
         <button
           type="button"
           onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-blue-600 cursor-pointer"
+          className="flex items-center gap-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 cursor-pointer"
         >
           <ArrowLeft size={14} />
           Volver al dashboard
         </button>
-        <div className="flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600">
+        <div className="flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600 dark:bg-red-950/40 dark:text-red-400">
           <span className="h-2 w-2 rounded-full bg-red-600 animate-pulse"></span>
           En vivo • {room.name}
         </div>
@@ -510,8 +668,8 @@ export default function VideoCallPage() {
         {/* Left: Video Grid */}
         <div className="flex flex-1 flex-col justify-between overflow-hidden">
           {permissionError && (
-            <div className="mb-4 flex items-center gap-3 rounded-2xl border border-red-100 bg-red-50 p-4 text-red-700 shadow-sm">
-              <AlertCircle className="h-5 w-5 shrink-0 text-red-600" />
+            <div className="mb-4 flex items-center gap-3 rounded-2xl border border-red-100 bg-red-50 p-4 text-red-700 shadow-sm dark:border-red-950/40 dark:bg-red-950/20 dark:text-red-400">
+              <AlertCircle className="h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
               <div className="text-sm font-medium">{permissionError}</div>
             </div>
           )}
@@ -520,49 +678,47 @@ export default function VideoCallPage() {
             
             {/* Local Video */}
             <div className="w-full h-full min-h-[200px]">
-              <VideoBox 
-                stream={localStream} 
-                isLocal={true} 
+              <VideoBox
+                stream={isScreenSharing && screenStream ? screenStream : localStream}
+                isLocal={true}
                 name={`Tú (${userFullName})`}
                 displayName={userFullName}
                 uid={user?.uid}
                 avatarUrl={user?.avatarUrl}
                 isAudioMuted={!micEnabled}
+                isVideoMuted={!cameraEnabled && !isScreenSharing}
+                isScreenSharing={isScreenSharing}
                 cameraOn={cameraEnabled}
               />
             </div>
             
             {/* Remote Videos */}
-            {Array.from(allRemoteSocketIds).map((socketId) => {
+            {allRemoteSocketIds.map((socketId) => {
               const stream = remoteStreams.get(socketId) || null
-              const uid = activeSockets.get(socketId)
-              let participant = uid ? participants.find(p => p.uid === uid) : null
-              
-              // Fallback: if DataChannel metadata hasn't arrived, find unmatched participant
-              if (!participant) {
-                const mappedUids = new Set(activeSockets.values())
-                const unmapped = participants.filter(
-                  p => p.uid !== user?.uid && !mappedUids.has(p.uid)
-                )
-                if (unmapped.length === 1) {
-                  participant = unmapped[0]
-                }
-              }
-              
-              const name = participant ? `${participant.firstName} ${participant.lastName}`.trim() || participant.username : 'Participante'
-              const status = uid ? remoteMediaStatus[uid] : undefined
+              const peerState = videoCallPeers.get(socketId)
+              const uid = peerState?.uid
+              const participant = uid ? participants.find(p => p.uid === uid) : null
+              const name = participant
+                ? `${participant.firstName} ${participant.lastName}`.trim() || participant.username
+                : 'Participante'
+              const remoteIsSharing = peerState?.isScreenSharing === true
+              const remoteAv = peerState
+                ? { audioMuted: peerState.audioMuted, videoMuted: peerState.videoMuted }
+                : undefined
               
               return (
                 <div key={socketId} className="w-full h-full min-h-[200px]">
-                  <VideoBox 
-                    stream={stream} 
-                    isLocal={false} 
+                  <VideoBox
+                    stream={stream}
+                    isLocal={false}
                     name={name}
                     displayName={name}
-                    uid={participant?.uid}
+                    uid={uid}
                     avatarUrl={participant?.avatarUrl}
-                    isAudioMuted={status?.isAudioMuted}
-                    cameraOn={status?.cameraOn}
+                    isAudioMuted={remoteAv?.audioMuted}
+                    isVideoMuted={remoteAv?.videoMuted && !remoteIsSharing}
+                    isScreenSharing={remoteIsSharing}
+                    cameraOn={remoteAv ? !remoteAv.videoMuted : true}
                   />
                 </div>
               )
@@ -571,11 +727,11 @@ export default function VideoCallPage() {
 
           {/* Controls Bar */}
           <div className="mt-4 flex shrink-0 items-center justify-center">
-            <div className="flex items-center gap-2 rounded-2xl bg-blue-100/50 px-6 py-3 shadow-sm backdrop-blur-md border border-blue-200/50">
+            <div className="flex items-center gap-2 rounded-2xl bg-blue-100/50 px-6 py-3 shadow-sm backdrop-blur-md border border-blue-200/50 dark:bg-slate-800/80 dark:border-slate-700/80 transition-colors duration-200">
               
               <button 
                 onClick={handleMicToggle}
-                className="flex flex-col items-center gap-1 rounded-xl p-2.5 text-blue-900 transition-colors hover:bg-blue-200"
+                className="flex flex-col items-center gap-1 rounded-xl p-2.5 text-blue-900 transition-colors hover:bg-blue-200 dark:text-slate-200 dark:hover:bg-slate-700"
               >
                 {micEnabled ? <Mic size={20} /> : <MicOff size={20} className="text-red-500" />}
                 <span className="text-[10px] font-medium">{micEnabled ? 'Silenciar' : 'Activar'}</span>
@@ -583,34 +739,41 @@ export default function VideoCallPage() {
               
               <button 
                 onClick={handleCameraToggle}
-                className="flex flex-col items-center gap-1 rounded-xl p-2.5 text-blue-900 transition-colors hover:bg-blue-200"
+                className="flex flex-col items-center gap-1 rounded-xl p-2.5 text-blue-900 transition-colors hover:bg-blue-200 dark:text-slate-200 dark:hover:bg-slate-700"
               >
                 {cameraEnabled ? <VideoIcon size={20} /> : <VideoOff size={20} className="text-red-500" />}
                 <span className="text-[10px] font-medium">Cámara</span>
               </button>
               
-              <button 
-                className="flex flex-col items-center gap-1 rounded-xl bg-blue-600 p-2.5 text-white transition-colors hover:bg-blue-700 shadow-sm"
+              <button
+                onClick={handleScreenShareToggle}
+                className={`flex flex-col items-center gap-1 rounded-xl p-2.5 transition-colors ${
+                  isScreenSharing
+                    ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
+                    : 'text-blue-900 hover:bg-blue-200 dark:text-slate-200 dark:hover:bg-slate-700'
+                }`}
               >
                 <MonitorUp size={20} />
-                <span className="text-[10px] font-medium">Compartir</span>
+                <span className="text-[10px] font-medium">
+                  {isScreenSharing ? 'Detener' : 'Compartir'}
+                </span>
               </button>
               
-              <button className="flex flex-col items-center gap-1 rounded-xl p-2.5 text-blue-900 transition-colors hover:bg-blue-200">
+              <button className="flex flex-col items-center gap-1 rounded-xl p-2.5 text-blue-900 transition-colors hover:bg-blue-200 dark:text-slate-200 dark:hover:bg-slate-700">
                 <MoreHorizontal size={20} />
                 <span className="text-[10px] font-medium">Más</span>
               </button>
               
-              <div className="mx-2 h-10 w-px bg-blue-300/50" />
+              <div className="mx-2 h-10 w-px bg-blue-300/50 dark:bg-slate-600" />
               
               <button 
                 onClick={leaveCall}
-                className="flex flex-col items-center gap-1 rounded-xl p-2.5 text-red-600 transition-colors hover:bg-red-100"
+                className="flex flex-col items-center gap-1 rounded-xl p-2.5 text-red-600 transition-colors hover:bg-red-100 dark:hover:bg-red-950/40"
               >
                 <div className="rounded-full bg-red-600 p-2 text-white">
                   <PhoneOff size={16} />
                 </div>
-                <span className="text-[10px] font-bold text-red-600">Salir</span>
+                <span className="text-[10px] font-bold text-red-600 dark:text-red-400">Salir</span>
               </button>
 
             </div>
@@ -618,13 +781,12 @@ export default function VideoCallPage() {
         </div>
 
         {/* Right: Sidebar Chat */}
-        <aside className="flex w-[320px] shrink-0 flex-col overflow-hidden rounded-2xl bg-white shadow-sm border border-slate-100">
-          {/* Participantes */}
-          <div className="border-b border-slate-100 px-4 py-3">
+        <aside className="flex w-[320px] shrink-0 flex-col overflow-hidden rounded-2xl bg-white dark:bg-slate-900 shadow-sm border border-slate-100 dark:border-slate-800 transition-colors duration-200">
+          <div className="border-b border-slate-100 dark:border-slate-800 px-4 py-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-slate-900">En la llamada</h2>
-              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-                {callParticipants.length} EN LLAMADA
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white">Participantes</h2>
+              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
+                {participants.length} ONLINE
               </span>
             </div>
             <div className="mt-2 flex flex-col gap-2">
@@ -639,9 +801,9 @@ export default function VideoCallPage() {
                     >
                       {getInitials(fullName)}
                     </div>
-                    <span className="truncate text-xs font-medium text-slate-700">{fullName}</span>
+                    <span className="truncate text-xs font-medium text-slate-700 dark:text-slate-300">{fullName}</span>
                     {isAdmin && (
-                      <span className="shrink-0 rounded bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-700">
+                      <span className="shrink-0 rounded bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-700 dark:bg-blue-950/50 dark:text-blue-400">
                         ADMINISTRADOR
                       </span>
                     )}
@@ -651,15 +813,14 @@ export default function VideoCallPage() {
             </div>
           </div>
 
-          {/* Chat header */}
-          <div className="border-b border-slate-100 px-5 py-3">
-            <h2 className="text-sm font-bold text-slate-900">Chat de la sesión</h2>
+          <div className="border-b border-slate-100 dark:border-slate-800 px-5 py-3">
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white">Chat de la sesión</h2>
           </div>
           
           <div className="flex-1 overflow-y-auto p-4">
             {messages.length === 0 ? (
               <div className="flex h-full items-center justify-center">
-                <p className="text-center text-xs text-slate-400">No hay mensajes aún.</p>
+                <p className="text-center text-xs text-slate-400 dark:text-slate-500">No hay mensajes aún.</p>
               </div>
             ) : (
               <div className="flex flex-col gap-4 pb-2">
@@ -671,17 +832,17 @@ export default function VideoCallPage() {
                       <div className="mb-1 flex items-center gap-2">
                         {!isOwn && (
                           <>
-                            <span className="text-xs font-semibold text-blue-600">{msg.senderName}</span>
+                            <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">{msg.senderName}</span>
                             {isAdmin && (
-                              <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-700">
+                              <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-700 dark:bg-blue-950/50 dark:text-blue-400">
                                 ADMINISTRADOR
                               </span>
                             )}
                           </>
                         )}
-                        <span className="text-[10px] text-slate-400">{formatTime(msg.createdAt)} {isOwn && 'Tú'}</span>
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500">{formatTime(msg.createdAt)} {isOwn && 'Tú'}</span>
                       </div>
-                      <div className={`rounded-2xl px-4 py-2.5 text-sm ${isOwn ? 'bg-blue-700 text-white rounded-tr-sm' : 'bg-slate-50 text-slate-700 rounded-tl-sm border border-slate-100'}`}>
+                      <div className={`rounded-2xl px-4 py-2.5 text-sm ${isOwn ? 'bg-blue-700 text-white rounded-tr-sm' : 'bg-slate-50 text-slate-700 rounded-tl-sm border border-slate-100 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700'}`}>
                         {msg.content}
                       </div>
                     </div>
@@ -692,20 +853,20 @@ export default function VideoCallPage() {
             )}
           </div>
           
-          <div className="border-t border-slate-100 p-4">
-            <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
+          <div className="border-t border-slate-100 dark:border-slate-800 p-4">
+            <div className="flex items-center gap-2 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 dark:focus-within:ring-blue-900/30 transition-all">
               <input
                 type="text"
                 value={newMessage}
                 onChange={e => setNewMessage(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
                 placeholder="Escribe un mensaje..."
-                className="flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400"
+                className="flex-1 bg-transparent text-sm text-slate-900 dark:text-white outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
               />
               <button 
                 onClick={handleSendMessage}
                 disabled={!newMessage.trim()}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-700 text-white disabled:opacity-50 transition-transform active:scale-95"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-700 text-white disabled:opacity-50 transition-transform active:scale-95 hover:bg-blue-800"
               >
                 <Send size={14} />
               </button>
