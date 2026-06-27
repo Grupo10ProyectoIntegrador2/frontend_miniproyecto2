@@ -21,7 +21,7 @@ export function useWebRTC(
   const [permissionError, setPermissionError] = useState<string | null>(null)
   const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map())
   const [peerSocketIds, setPeerSocketIds] = useState<Set<string>>(new Set())
-  
+
   const peerConnections = useRef<Map<string, RTCPeerConnection>>(new Map())
   const remoteCandidatesQueue = useRef<Map<string, RTCIceCandidateInit[]>>(new Map())
   const dataChannels = useRef<Map<string, RTCDataChannel>>(new Map())
@@ -43,6 +43,9 @@ export function useWebRTC(
 
   const onPeerMetadataReceivedRef = useRef(onPeerMetadataReceived)
   onPeerMetadataReceivedRef.current = onPeerMetadataReceived
+
+  const onPeerMediaStatusReceivedRef = useRef(onPeerMediaStatusReceived)
+  onPeerMediaStatusReceivedRef.current = onPeerMediaStatusReceived
 
   const removePeer = useCallback((socketId: string) => {
     if (!socketId) return
@@ -210,7 +213,7 @@ export function useWebRTC(
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
       setLocalStream(stream)
       localStreamRef.current = stream
-      
+
       // Add tracks to existing peer connections (if any)
       // onnegotiationneeded will fire automatically and handle renegotiation
       peerConnections.current.forEach((pc) => {
@@ -222,7 +225,7 @@ export function useWebRTC(
           }
         })
       })
-      
+
       return stream
     } catch (error: any) {
       console.error('Error accessing media devices:', error)
@@ -452,7 +455,7 @@ export function useWebRTC(
       const offerCollision =
         makingOffer.current.get(payload.senderSocketId) ||
         pc.signalingState !== 'stable'
-        
+
       const shouldIgnore = !polite && offerCollision
       ignoreOffer.current.set(payload.senderSocketId, shouldIgnore)
 
