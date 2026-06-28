@@ -8,7 +8,8 @@ import {
   CheckCircle2,
   Loader2,
   Trash2,
-  X
+  X,
+  ArrowLeft
 } from 'lucide-react'
 import { useAuth } from '../contexts/useAuth'
 import * as authService from '../services/auth.service'
@@ -282,6 +283,20 @@ export default function PerfilPage() {
       <DashboardHeader />
 
       <main id="main-content" className="flex-1 mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        {/* Invisible live region for screen reader announcements */}
+        <div style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: 0 }} aria-live="polite" role="status">
+          {successMessage}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => navigate('/dashboard')}
+          className="mb-6 inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-slate-500 transition-colors hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Volver al dashboard
+        </button>
+
         {/* Title Block */}
         <div className="mb-8">
           <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
@@ -409,6 +424,7 @@ export default function PerfilPage() {
                     <button
                       type="button"
                       onClick={() => setShowAvatarGrid(!showAvatarGrid)}
+                      aria-label="Cambiar avatar"
                       className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-xl text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer"
                     >
                       {showAvatarGrid ? 'Ocultar Selector' : 'Cambiar'}

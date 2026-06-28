@@ -11,6 +11,7 @@ export default function SalasCrearPage() {
   const [name, setName] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [successMsg, setSuccessMsg] = useState('')
 
   const validationError = name.trim() ? validateRoomName(name) : null
   const isValid = name.trim().length > 0 && !validationError
@@ -30,11 +31,13 @@ export default function SalasCrearPage() {
 
     try {
       const room = await createRoom(name)
-      navigate(`/salas/${room.id}/chat`, { state: { room, justCreated: true }, replace: true })
+      setSuccessMsg('Sala creada con éxito. Redirigiendo al Salón de Estudio.')
+      setTimeout(() => {
+        navigate(`/salas/${room.id}/chat`, { state: { room, justCreated: true }, replace: true })
+      }, 1000)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'No se pudo crear la sala. Intenta de nuevo.'
       setError(message)
-    } finally {
       setSubmitting(false)
     }
   }
@@ -56,8 +59,21 @@ export default function SalasCrearPage() {
         id="main-content"
         className="flex flex-1 flex-col items-center px-4 py-8 sm:px-6"
       >
+        {/* Invisible live region for screen reader announcements */}
+        <div style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: 0 }} aria-live="polite" role="status">
+          {successMsg}
+        </div>
 
         <div className="w-full max-w-lg animate-slide-up">
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            className="mb-6 inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-slate-500 transition-colors hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Volver al dashboard
+          </button>
+
           <div className="mb-8 text-center">
             <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent">
               Crear Sala
