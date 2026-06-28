@@ -396,75 +396,8 @@ export default function ChatPage() {
 
         {/* ──────────── LEFT SIDEBAR ──────────── */}
         <aside className="flex w-52 shrink-0 flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 transition-colors duration-200">
-          {/* Room card */}
-          <div className="m-3 mb-2">
-            <div className="rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 p-3 text-white shadow-sm">
-              <div className="flex items-center gap-2">
-                <div className="rounded-lg bg-white/20 p-1.5">
-                  <BookOpen size={14} />
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-bold leading-tight">
-                    {room.name}
-                  </p>
-                  <p className="text-[11px] text-blue-100">Sesión Activa</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* GESTIÓN DE SALA */}
-          <div className="mx-3 mb-4 rounded-xl border border-slate-100 bg-slate-50 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800/50">
-            <div className="mb-3 flex items-center justify-between">
-              <span className="text-[10px] font-bold tracking-wider text-slate-500 dark:text-slate-400">GESTIÓN DE SALA</span>
-              {isOwner && (
-                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
-                  PROPIETARIO
-                </span>
-              )}
-            </div>
-
-            <div className="mb-4 flex items-center justify-between">
-              <span className="text-sm font-bold text-slate-900 dark:text-white truncate max-w-[140px]">{room.name}</span>
-              {isOwner && (
-                <div className="flex items-center gap-1">
-                  <button 
-                    onClick={() => { setNewName(room.name); setEditingName(true); }}
-                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200 transition-colors"
-                    title="Editar nombre"
-                  >
-                    <Edit2 size={14} />
-                  </button>
-                  <button 
-                    onClick={handleDeleteRoom}
-                    disabled={deleting}
-                    className="rounded-lg p-1.5 text-slate-400 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400 transition-colors disabled:opacity-50"
-                    title="Eliminar sala"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <span className="text-[10px] font-bold tracking-wider text-slate-500 dark:text-slate-400">ID DE SALA</span>
-              <div className="mt-1 flex items-center gap-2">
-                <span className="text-sm font-bold text-blue-600 dark:text-blue-400 truncate max-w-[120px]">#{room.id.substring(0, 8).toUpperCase()}</span>
-                <button 
-                  onClick={handleCopyId}
-                  className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-                  title="Copiar ID completo"
-                >
-                  {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex-1" />
-
-          <div className="border-t border-slate-100 px-3 py-3 dark:border-slate-800">
+          {/* Volver al dashboard en la parte superior */}
+          <div className="border-b border-slate-100 px-3 py-3 dark:border-slate-800">
             <button
               type="button"
               onClick={() => navigate('/dashboard')}
@@ -474,6 +407,60 @@ export default function ChatPage() {
               Volver al dashboard
             </button>
           </div>
+
+          {/* SECCIÓN UNIFICADA: SESIÓN ACTIVA / GESTIÓN DE SALA */}
+          <div className="m-3 mb-2 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-700 p-4 text-white shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="rounded-lg bg-white/20 p-1.5">
+                  <BookOpen size={14} />
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold leading-tight">
+                    {room.name}
+                  </p>
+                  <p className="text-[11px] text-indigo-200">Sesión Activa</p>
+                </div>
+              </div>
+              {isOwner && (
+                <div className="flex items-center gap-1">
+                  <button 
+                    onClick={() => { setNewName(room.name); setEditingName(true); }}
+                    className="rounded-lg p-1 text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+                    title="Editar nombre"
+                  >
+                    <Edit2 size={13} />
+                  </button>
+                  <button 
+                    onClick={handleDeleteRoom}
+                    disabled={deleting}
+                    className="rounded-lg p-1 text-white/70 hover:bg-red-500/30 hover:text-red-200 transition-colors disabled:opacity-50"
+                    title="Eliminar sala"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-3 border-t border-white/10 pt-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-medium tracking-wider text-indigo-200">ID DE SALA</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-mono font-bold text-white">#{room.id.substring(0, 8).toUpperCase()}</span>
+                  <button 
+                    onClick={handleCopyId}
+                    className="text-white/80 hover:text-white transition-colors"
+                    title="Copiar ID completo"
+                  >
+                    {copied ? <Check size={12} className="text-emerald-300" /> : <Copy size={12} />}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1" />
         </aside>
 
         {/* ──────────── MAIN CHAT ──────────── */}
@@ -501,16 +488,8 @@ export default function ChatPage() {
                 </div>
                 <div>
                   <h2 className="text-[15px] font-bold text-slate-900 dark:text-white leading-tight">{room.name}</h2>
-                  <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-0.5">{participants.length} participantes activos</p>
+                  <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-0.5">{onlineCount} conectados en vivo • {participants.length} registrados</p>
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button className="rounded-full p-2.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors">
-                  <Search size={20} />
-                </button>
-                <button className="rounded-full p-2.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors">
-                  <MoreVertical size={20} />
-                </button>
               </div>
             </div>
 
@@ -636,14 +615,6 @@ export default function ChatPage() {
           {/* ── Message input ── */}
           <div className="shrink-0 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-5 py-3 transition-colors duration-200">
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                aria-label="Adjuntar archivo"
-                className="shrink-0 cursor-pointer rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
-              >
-                <PlusCircle size={18} />
-              </button>
-
               <input
                 ref={inputRef}
                 id="chat-message-input"
@@ -691,7 +662,7 @@ export default function ChatPage() {
                 Participantes
               </h2>
               <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
-                {participants.length} ONLINE
+                {onlineCount} ONLINE
               </span>
             </div>
           </div>
@@ -707,26 +678,27 @@ export default function ChatPage() {
               const fullName =
                 `${p.firstName} ${p.lastName}`.trim() || p.username
               const color = avatarColor(p.uid)
+              const isOnline = onlineParticipants.some((op) => op.uid === p.uid)
               return (
                 <div key={p.uid} className="flex items-center gap-2.5">
-                  <div
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-                    style={{ backgroundColor: color }}
-                  >
-                    {getInitials(fullName)}
+                  <div className="relative">
+                    <div
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+                      style={{ backgroundColor: color }}
+                    >
+                      {getInitials(fullName)}
+                    </div>
+                    <span 
+                      className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-white dark:ring-slate-900 ${
+                        isOnline ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-650'
+                      }`} 
+                    />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[13px] font-semibold text-slate-800 dark:text-slate-200">
                       {fullName}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    aria-label="Micrófono"
-                    className="shrink-0 cursor-pointer text-slate-300 transition-colors hover:text-slate-500 dark:text-slate-600 dark:hover:text-slate-400"
-                  >
-                    <Mic size={13} />
-                  </button>
                 </div>
               )
             })}
