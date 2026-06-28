@@ -71,6 +71,7 @@ export default function DashboardHeader({ onLogout, fullWidth = false }: Dashboa
             className="flex items-center gap-3 p-1.5 pr-3 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800 transition-all border border-slate-100/80 dark:border-slate-700 shadow-xs cursor-pointer focus:outline-none"
             aria-expanded={isOpen}
             aria-haspopup="true"
+            aria-label="Menú de cuenta y configuraciones"
           >
             {/* Avatar Circle */}
             <div

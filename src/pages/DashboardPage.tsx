@@ -190,6 +190,7 @@ export default function DashboardPage() {
                         <button
                           type="button"
                           onClick={() => navigate(`/salas/${room.id}/chat`, { state: { room } })}
+                          aria-label={`Entrar a la sala ${room.name}`}
                           className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 active:scale-[0.98] transition-colors cursor-pointer"
                         >
                           <ArrowUpRight className="h-4 w-4" />
@@ -198,6 +199,7 @@ export default function DashboardPage() {
                         <button
                           type="button"
                           onClick={() => handleCopyId(room.id)}
+                          aria-label={`Copiar ID de la sala ${room.name}`}
                           className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 active:scale-[0.98] cursor-pointer"
                         >
                           <Copy className="h-4 w-4" />
@@ -274,6 +276,7 @@ export default function DashboardPage() {
                         <button
                           type="button"
                           onClick={() => navigate(`/salas/${room.id}/chat`, { state: { room } })}
+                          aria-label={`Entrar a la sala ${room.name}`}
                           className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 active:scale-[0.98] transition-colors cursor-pointer"
                         >
                           <ArrowUpRight className="h-4 w-4" />
@@ -282,6 +285,7 @@ export default function DashboardPage() {
                         <button
                           type="button"
                           onClick={() => handleCopyId(room.id)}
+                          aria-label={`Copiar ID de la sala ${room.name}`}
                           className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 active:scale-[0.98] cursor-pointer"
                         >
                           <Copy className="h-4 w-4" />
