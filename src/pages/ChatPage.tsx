@@ -8,14 +8,14 @@ import {
   BookOpen,
   Mic,
   Smile,
-  PlusCircle,
   Copy,
   Edit2,
   Check,
   Trash2,
   Play,
-  Search,
-  MoreVertical,
+  Menu,
+  Users,
+  X,
 } from 'lucide-react'
 import { useAuth } from '../contexts/useAuth'
 import { auth } from '../lib/firebase'
@@ -117,6 +117,10 @@ export default function ChatPage() {
   const [newName, setNewName] = useState('')
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+
+  // Responsiveness states
+  const [showMenu, setShowMenu] = useState(false)
+  const [showParticipants, setShowParticipants] = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -392,19 +396,44 @@ export default function ChatPage() {
       <DashboardHeader />
 
       {/* ════════════════════ CONTENT ════════════════════ */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Backdrop for Left Sidebar on Mobile */}
+        {showMenu && (
+          <div
+            className="fixed inset-0 z-30 bg-black/40 backdrop-blur-xs md:hidden"
+            onClick={() => setShowMenu(false)}
+          />
+        )}
+
+        {/* Backdrop for Right Sidebar on Mobile */}
+        {showParticipants && (
+          <div
+            className="fixed inset-0 z-30 bg-black/40 backdrop-blur-xs lg:hidden"
+            onClick={() => setShowParticipants(false)}
+          />
+        )}
 
         {/* ──────────── LEFT SIDEBAR ──────────── */}
-        <aside className="flex w-52 shrink-0 flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 transition-colors duration-200">
+        <aside className={`
+          ${showMenu ? 'flex fixed inset-y-0 left-0 z-45 shadow-xl w-60' : 'hidden'} 
+          md:flex md:relative md:w-52 shrink-0 flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 transition-all duration-200
+        `}>
           {/* Volver al dashboard en la parte superior */}
-          <div className="border-b border-slate-100 px-3 py-3 dark:border-slate-800">
+          <div className="border-b border-slate-100 px-3 py-3 dark:border-slate-800 flex items-center justify-between">
             <button
               type="button"
               onClick={() => navigate('/dashboard')}
-              className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-2.5 text-[13px] font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+              className="flex items-center gap-2 rounded-lg px-2 py-2 text-[13px] font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
             >
               <ArrowLeft size={14} />
               Volver al dashboard
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowMenu(false)}
+              className="md:hidden p-1 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+            >
+              <X size={16} />
             </button>
           </div>
 
@@ -481,15 +510,36 @@ export default function ChatPage() {
           {/* Chat Container Card */}
           <div className="flex flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm transition-colors duration-200">
             {/* Header inside chat container */}
-            <div className="flex shrink-0 items-center justify-between border-b border-slate-100 dark:border-slate-800 px-6 py-4">
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50/80 dark:bg-blue-950/40">
-                  <BookOpen size={22} className="text-blue-600 dark:text-blue-400" />
+            <div className="flex shrink-0 items-center justify-between border-b border-slate-100 dark:border-slate-800 px-4 py-4 sm:px-6">
+              <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+                {/* Mobile Left Sidebar Toggle */}
+                <button
+                  type="button"
+                  onClick={() => setShowMenu(!showMenu)}
+                  className="md:hidden p-2 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+                  aria-label="Ver menú de sala"
+                >
+                  <Menu size={20} />
+                </button>
+
+                <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50/80 dark:bg-blue-950/40">
+                  <BookOpen className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 dark:text-blue-400" />
                 </div>
-                <div>
-                  <h2 className="text-[15px] font-bold text-slate-900 dark:text-white leading-tight">{room.name}</h2>
-                  <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-0.5">{onlineCount} conectados en vivo • {participants.length} registrados</p>
+                <div className="min-w-0">
+                  <h2 className="text-[14px] sm:text-[15px] font-bold text-slate-900 dark:text-white leading-tight truncate">{room.name}</h2>
+                  <p className="text-[11px] sm:text-[13px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">{onlineCount} en vivo • {participants.length} total</p>
                 </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {/* Mobile Right Sidebar Toggle */}
+                <button
+                  type="button"
+                  onClick={() => setShowParticipants(!showParticipants)}
+                  className="lg:hidden p-2 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+                  aria-label="Ver participantes"
+                >
+                  <Users size={20} />
+                </button>
               </div>
             </div>
 
@@ -654,16 +704,26 @@ export default function ChatPage() {
         </main>
 
         {/* ──────────── RIGHT SIDEBAR ──────────── */}
-        <aside className="flex w-72 shrink-0 flex-col border-l border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 transition-colors duration-200">
+        <aside className={`
+          ${showParticipants ? 'flex fixed inset-y-0 right-0 z-45 shadow-xl w-72' : 'hidden'} 
+          lg:flex lg:relative lg:w-72 shrink-0 flex-col border-l border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 transition-all duration-200
+        `}>
           {/* Participants header */}
-          <div className="px-4 pb-3 pt-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-[15px] font-bold text-slate-900 dark:text-white">
-                Participantes
-              </h2>
+          <div className="px-4 pb-3 pt-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <h2 className="text-[15px] font-bold text-slate-900 dark:text-white">
+              Participantes
+            </h2>
+            <div className="flex items-center gap-1.5">
               <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
                 {onlineCount} ONLINE
               </span>
+              <button
+                type="button"
+                onClick={() => setShowParticipants(false)}
+                className="lg:hidden p-1 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-350"
+              >
+                <X size={16} />
+              </button>
             </div>
           </div>
 

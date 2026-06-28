@@ -6,12 +6,13 @@ import {
   Video as VideoIcon,
   VideoOff,
   MonitorUp,
-  MoreHorizontal,
   PhoneOff,
   Send,
   ArrowLeft,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  X,
+  MessageSquare
 } from 'lucide-react'
 import { useAuth } from '../contexts/useAuth'
 import { auth } from '../lib/firebase'
@@ -272,6 +273,7 @@ export default function VideoCallPage() {
   
   const [micEnabled, setMicEnabled] = useState(true)
   const [cameraEnabled, setCameraEnabled] = useState(true)
+  const [showChat, setShowChat] = useState(false)
 
   const localParticipant = useMemo(() => {
     if (!user || !room) return undefined
@@ -647,23 +649,40 @@ export default function VideoCallPage() {
     <div className="flex h-screen flex-col overflow-hidden bg-slate-50 dark:bg-slate-950 font-sans transition-colors duration-200">
       <DashboardHeader fullWidth={true} />
 
-      <div className="flex h-10 shrink-0 items-center gap-4 border-b border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-900 px-6 transition-colors duration-200">
+      <div className="flex h-10 shrink-0 items-center justify-between border-b border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-900 px-6 transition-colors duration-200">
+        <div className="flex items-center gap-4 min-w-0">
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            className="flex items-center gap-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 cursor-pointer"
+          >
+            <ArrowLeft size={14} />
+            Volver al dashboard
+          </button>
+          <div className="flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600 dark:bg-red-950/40 dark:text-red-400 truncate">
+            <span className="h-2 w-2 rounded-full bg-red-600 animate-pulse shrink-0"></span>
+            <span className="truncate">En vivo • {room.name}</span>
+          </div>
+        </div>
         <button
           type="button"
-          onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 cursor-pointer"
+          onClick={() => setShowChat(!showChat)}
+          className="lg:hidden flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer"
         >
-          <ArrowLeft size={14} />
-          Volver al dashboard
+          <MessageSquare size={13} />
+          {showChat ? 'Ocultar Chat' : 'Ver Chat'}
         </button>
-        <div className="flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600 dark:bg-red-950/40 dark:text-red-400">
-          <span className="h-2 w-2 rounded-full bg-red-600 animate-pulse"></span>
-          En vivo • {room.name}
-        </div>
       </div>
 
       {/* Main Layout */}
-      <main className="flex flex-1 overflow-hidden p-4 gap-4">
+      <main className="flex flex-1 overflow-hidden p-4 gap-4 relative">
+        {/* Backdrop for Mobile Chat Drawer */}
+        {showChat && (
+          <div
+            className="fixed inset-0 z-30 bg-black/40 backdrop-blur-xs lg:hidden"
+            onClick={() => setShowChat(false)}
+          />
+        )}
         
         {/* Left: Video Grid */}
         <div className="flex flex-1 flex-col justify-between overflow-hidden">
@@ -781,13 +800,25 @@ export default function VideoCallPage() {
         </div>
 
         {/* Right: Sidebar Chat */}
-        <aside className="flex w-[320px] shrink-0 flex-col overflow-hidden rounded-2xl bg-white dark:bg-slate-900 shadow-sm border border-slate-100 dark:border-slate-800 transition-colors duration-200">
+        <aside className={`
+          ${showChat ? 'flex fixed inset-y-0 right-0 z-45 shadow-xl w-80 pt-16' : 'hidden'} 
+          lg:flex lg:relative lg:w-[320px] shrink-0 flex-col overflow-hidden rounded-2xl bg-white dark:bg-slate-900 shadow-sm border border-slate-100 dark:border-slate-800 transition-all duration-200
+        `}>
           <div className="border-b border-slate-100 dark:border-slate-800 px-4 py-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-slate-900 dark:text-white">Participantes</h2>
-              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
-                {participants.length} ONLINE
-              </span>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white">Participantes</h2>
+                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
+                  {participants.length} ONLINE
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowChat(false)}
+                className="lg:hidden p-1 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-650 dark:hover:bg-slate-800 dark:hover:text-slate-350"
+              >
+                <X size={16} />
+              </button>
             </div>
             <div className="mt-2 flex flex-col gap-2">
               {callParticipants.map((p) => {
