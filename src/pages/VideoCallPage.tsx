@@ -732,6 +732,8 @@ export default function VideoCallPage() {
               <button 
                 onClick={handleMicToggle}
                 className="flex flex-col items-center gap-1 rounded-xl p-2.5 text-blue-900 transition-colors hover:bg-blue-200 dark:text-slate-200 dark:hover:bg-slate-700"
+                aria-label={micEnabled ? "Silenciar micrófono" : "Activar micrófono"}
+                aria-pressed={!micEnabled}
               >
                 {micEnabled ? <Mic size={20} /> : <MicOff size={20} className="text-red-500" />}
                 <span className="text-[10px] font-medium">{micEnabled ? 'Silenciar' : 'Activar'}</span>
@@ -740,6 +742,8 @@ export default function VideoCallPage() {
               <button 
                 onClick={handleCameraToggle}
                 className="flex flex-col items-center gap-1 rounded-xl p-2.5 text-blue-900 transition-colors hover:bg-blue-200 dark:text-slate-200 dark:hover:bg-slate-700"
+                aria-label={cameraEnabled ? "Apagar cámara" : "Encender cámara"}
+                aria-pressed={cameraEnabled}
               >
                 {cameraEnabled ? <VideoIcon size={20} /> : <VideoOff size={20} className="text-red-500" />}
                 <span className="text-[10px] font-medium">Cámara</span>
@@ -752,6 +756,8 @@ export default function VideoCallPage() {
                     ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
                     : 'text-blue-900 hover:bg-blue-200 dark:text-slate-200 dark:hover:bg-slate-700'
                 }`}
+                aria-label={isScreenSharing ? "Detener compartir pantalla" : "Compartir pantalla"}
+                aria-pressed={isScreenSharing}
               >
                 <MonitorUp size={20} />
                 <span className="text-[10px] font-medium">
@@ -759,16 +765,10 @@ export default function VideoCallPage() {
                 </span>
               </button>
               
-              <button className="flex flex-col items-center gap-1 rounded-xl p-2.5 text-blue-900 transition-colors hover:bg-blue-200 dark:text-slate-200 dark:hover:bg-slate-700">
-                <MoreHorizontal size={20} />
-                <span className="text-[10px] font-medium">Más</span>
-              </button>
-              
-              <div className="mx-2 h-10 w-px bg-blue-300/50 dark:bg-slate-600" />
-              
               <button 
                 onClick={leaveCall}
                 className="flex flex-col items-center gap-1 rounded-xl p-2.5 text-red-600 transition-colors hover:bg-red-100 dark:hover:bg-red-950/40"
+                aria-label="Salir de la videollamada"
               >
                 <div className="rounded-full bg-red-600 p-2 text-white">
                   <PhoneOff size={16} />
