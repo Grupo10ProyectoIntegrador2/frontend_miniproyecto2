@@ -493,7 +493,7 @@ export default function ChatPage() {
         </aside>
 
         {/* ──────────── MAIN CHAT ──────────── */}
-        <main className="flex flex-1 flex-col overflow-hidden bg-slate-50/50 dark:bg-slate-950/50 p-4 gap-4 transition-colors duration-200">
+        <main id="main-content" className="flex flex-1 flex-col overflow-hidden bg-slate-50/50 dark:bg-slate-950/50 p-4 gap-4 transition-colors duration-200">
           
           {/* Top Card: Start Video Call */}
           <div className="flex shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 px-6 py-6 shadow-sm min-h-[96px] transition-colors duration-200">
@@ -690,6 +690,7 @@ export default function ChatPage() {
                 type="button"
                 onClick={() => void handleSendMessage()}
                 disabled={sending || !newMessage.trim()}
+                aria-label="Enviar mensaje"
                 className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm transition-all hover:bg-blue-700 active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {sending ? (

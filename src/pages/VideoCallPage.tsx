@@ -675,7 +675,7 @@ export default function VideoCallPage() {
       </div>
 
       {/* Main Layout */}
-      <main className="flex flex-1 overflow-hidden p-4 gap-4 relative">
+      <main id="main-content" className="flex flex-1 overflow-hidden p-4 gap-4 relative">
         {/* Backdrop for Mobile Chat Drawer */}
         {showChat && (
           <div
@@ -897,6 +897,7 @@ export default function VideoCallPage() {
               <button 
                 onClick={handleSendMessage}
                 disabled={!newMessage.trim()}
+                aria-label="Enviar mensaje"
                 className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-700 text-white disabled:opacity-50 transition-transform active:scale-95 hover:bg-blue-800"
               >
                 <Send size={14} />
