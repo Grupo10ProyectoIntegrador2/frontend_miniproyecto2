@@ -28,16 +28,16 @@ export default function DashboardHeader({ onLogout, fullWidth = false }: Dashboa
 
   const getAvatarColor = (avatarUrl: string): string => {
     const colorMap: Record<string, string> = {
-      'avatar-1': '#6c63ff',
-      'avatar-2': '#10b981',
-      'avatar-3': '#f59e0b',
-      'avatar-4': '#ef4444',
-      'avatar-5': '#3b82f6',
-      'avatar-6': '#ec4899',
-      'avatar-7': '#8b5cf6',
-      'avatar-8': '#14b8a6',
+      'avatar-1': '#4338ca',
+      'avatar-2': '#047857',
+      'avatar-3': '#b45309',
+      'avatar-4': '#b91c1c',
+      'avatar-5': '#1d4ed8',
+      'avatar-6': '#be185d',
+      'avatar-7': '#6d28d9',
+      'avatar-8': '#0f766e',
     }
-    return colorMap[avatarUrl] || '#6c63ff'
+    return colorMap[avatarUrl] || '#4338ca'
   }
 
   const isUrl = (url: string) => {

@@ -19,7 +19,7 @@ import { getJoinedRooms } from '../services/rooms.service'
 import { getRoomInitials } from '../lib/room-utils'
 import type { Room } from '../types/room.types'
 
-const AVATAR_COLORS = ['#6366f1', '#8b5cf6', '#3b82f6', '#ec4899', '#14b8a6']
+const AVATAR_COLORS = ['#4338ca', '#6d28d9', '#1d4ed8', '#be185d', '#0f766e']
 
 function getAvatarColor(name: string): string {
   let hash = 0

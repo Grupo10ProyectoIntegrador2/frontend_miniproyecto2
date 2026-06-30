@@ -52,7 +52,7 @@ function getInitials(name: string): string {
     .toUpperCase()
 }
 
-const AVATAR_COLORS = ['#6366F1', '#8B5CF6', '#EC4899', '#14B8A6', '#F59E0B', '#10B981', '#3B82F6']
+const AVATAR_COLORS = ['#4338ca', '#6d28d9', '#be185d', '#0f766e', '#b45309', '#047857', '#1d4ed8']
 function avatarColor(uid: string): string {
   let hash = 0
   for (const c of uid) hash = (hash * 31 + c.charCodeAt(0)) & 0xffff
@@ -69,14 +69,14 @@ function isAvatarImage(url?: string): boolean {
 }
 
 const PRESET_AVATAR_COLORS: Record<string, string> = {
-  'avatar-1': '#6c63ff',
-  'avatar-2': '#10b981',
-  'avatar-3': '#f59e0b',
-  'avatar-4': '#ef4444',
-  'avatar-5': '#3b82f6',
-  'avatar-6': '#ec4899',
-  'avatar-7': '#8b5cf6',
-  'avatar-8': '#14b8a6',
+  'avatar-1': '#4338ca',
+  'avatar-2': '#047857',
+  'avatar-3': '#b45309',
+  'avatar-4': '#b91c1c',
+  'avatar-5': '#1d4ed8',
+  'avatar-6': '#be185d',
+  'avatar-7': '#6d28d9',
+  'avatar-8': '#0f766e',
 }
 
 function resolveAvatarBackground(uid: string, avatarUrl?: string): string {

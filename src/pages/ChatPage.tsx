@@ -40,13 +40,13 @@ interface ChatMessage {
 /* ─────────────── Helpers ─────────────── */
 
 const AVATAR_COLORS = [
-  '#6366F1',
-  '#8B5CF6',
-  '#EC4899',
-  '#14B8A6',
-  '#F59E0B',
-  '#10B981',
-  '#3B82F6',
+  '#4338ca',
+  '#6d28d9',
+  '#be185d',
+  '#0f766e',
+  '#b45309',
+  '#047857',
+  '#1d4ed8',
 ]
 
 function avatarColor(uid: string): string {
