@@ -302,7 +302,7 @@ export default function PerfilPage() {
           <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
             Configuraciones
           </h1>
-          <p className="mt-2 text-slate-500 dark:text-slate-400 text-base">
+          <p className="mt-2 text-slate-650 dark:text-slate-400 text-base">
             Administra tu perfil, la visualización y las opciones de accesibilidad.
           </p>
         </div>
@@ -328,7 +328,7 @@ export default function PerfilPage() {
           {/* Sidebar Navigation */}
           <aside className="lg:col-span-1">
             <nav className="flex flex-col gap-2">
-              <span className="px-3 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">
+              <span className="px-3 text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-2">
                 Secciones
               </span>
 
@@ -374,7 +374,7 @@ export default function PerfilPage() {
                 Accesibilidad
               </button>
             </nav>
-            <p className="mt-4 px-3 text-xs text-slate-400 dark:text-slate-500 leading-relaxed hidden lg:block">
+            <p className="mt-4 px-3 text-xs text-slate-600 dark:text-slate-400 leading-relaxed hidden lg:block">
               Selecciona una sección para ajustar la experiencia del usuario.
             </p>
           </aside>
@@ -390,7 +390,7 @@ export default function PerfilPage() {
                     <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                       Editar perfil
                     </h2>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                    <p className="text-sm text-slate-650 dark:text-slate-400">
                       Actualiza tus datos personales y la información visible para otras personas.
                     </p>
                   </div>
@@ -416,7 +416,7 @@ export default function PerfilPage() {
                       <h3 className="text-lg font-bold text-slate-900 dark:text-white leading-tight">
                         {firstName || user.firstName} {lastName || user.lastName}
                       </h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      <p className="text-xs text-slate-650 dark:text-slate-400 mt-1">
                         Actualiza la imagen de tu avatar y tus datos de visualización.
                       </p>
                     </div>
@@ -533,14 +533,14 @@ export default function PerfilPage() {
                           disabled={user.provider === 'google'}
                           className={`auth-input dark:border-slate-800 dark:text-white ${
                             user.provider === 'google'
-                              ? 'opacity-60 bg-slate-50 dark:bg-slate-950/30 border-slate-200/60 dark:border-slate-800/60 cursor-not-allowed text-slate-500 dark:text-slate-500'
+                              ? 'opacity-60 bg-slate-50 dark:bg-slate-950/30 border-slate-200/60 dark:border-slate-800/60 cursor-not-allowed text-slate-600 dark:text-slate-400'
                               : 'dark:bg-slate-950'
                           } ${fieldErrors.email ? 'border-red-500 focus:ring-red-500' : ''}`}
                           placeholder="correo@institucion.edu"
                           required
                         />
                         {user.provider === 'google' ? (
-                          <span className="text-xs text-slate-400 dark:text-slate-500 italic">
+                          <span className="text-xs text-slate-600 dark:text-slate-400 italic">
                             El correo no se puede cambiar (cuenta de Google).
                           </span>
                         ) : (
@@ -587,7 +587,7 @@ export default function PerfilPage() {
                     <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                       Visualización
                     </h2>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                    <p className="text-sm text-slate-650 dark:text-slate-400">
                       Elige el tema de la pantalla y ajusta cómo se ve la interfaz.
                     </p>
                   </div>
@@ -597,7 +597,7 @@ export default function PerfilPage() {
                       <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">
                         Visualización
                       </h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                      <p className="text-xs text-slate-650 dark:text-slate-400">
                         Personaliza el tema y la densidad de la interfaz.
                       </p>
                     </div>
@@ -632,7 +632,7 @@ export default function PerfilPage() {
                     <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                       Editar perfil
                     </h2>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                    <p className="text-sm text-slate-650 dark:text-slate-400">
                       Adapta la plataforma para que sea más fácil de ver, leer y navegar según tus preferencias.
                     </p>
                   </div>
@@ -642,7 +642,7 @@ export default function PerfilPage() {
                       <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">
                         Accesibilidad
                       </h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                      <p className="text-xs text-slate-650 dark:text-slate-400">
                         Ajusta las configuraciones de legibilidad, contraste y movimiento.
                       </p>
                     </div>
@@ -716,7 +716,7 @@ export default function PerfilPage() {
               </button>
             </div>
 
-            <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+            <p className="text-sm text-slate-650 dark:text-slate-400 leading-relaxed">
               ¿Estás seguro de que deseas eliminar tu cuenta? Esta acción no se puede deshacer.
             </p>
 

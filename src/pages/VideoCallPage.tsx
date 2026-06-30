@@ -631,7 +631,7 @@ export default function VideoCallPage() {
       <div className="flex h-screen flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 p-4 transition-colors duration-200">
         <AlertCircle className="h-10 w-10 text-red-500 mb-4" />
         <h1 className="text-xl font-bold text-slate-900 dark:text-white">Error</h1>
-        <p className="text-slate-500 dark:text-slate-400 mb-4">{error || 'No se pudo cargar.'}</p>
+        <p className="text-slate-650 dark:text-slate-400 mb-4">{error || 'No se pudo cargar.'}</p>
         <button onClick={leaveCall} className="rounded-xl bg-blue-600 px-5 py-2.5 text-white hover:bg-blue-700">Volver</button>
       </div>
     )
@@ -654,7 +654,7 @@ export default function VideoCallPage() {
           <button
             type="button"
             onClick={() => navigate('/dashboard')}
-            className="flex items-center gap-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 cursor-pointer"
+            className="flex items-center gap-1.5 text-sm font-medium text-slate-600 transition-colors hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 cursor-pointer"
           >
             <ArrowLeft size={14} />
             Volver al dashboard
@@ -851,7 +851,7 @@ export default function VideoCallPage() {
           <div className="flex-1 overflow-y-auto p-4">
             {messages.length === 0 ? (
               <div className="flex h-full items-center justify-center">
-                <p className="text-center text-xs text-slate-400 dark:text-slate-500">No hay mensajes aún.</p>
+                <p className="text-center text-xs text-slate-600 dark:text-slate-400">No hay mensajes aún.</p>
               </div>
             ) : (
               <div className="flex flex-col gap-4 pb-2">
@@ -871,7 +871,7 @@ export default function VideoCallPage() {
                             )}
                           </>
                         )}
-                        <span className="text-[10px] text-slate-400 dark:text-slate-500">{formatTime(msg.createdAt)} {isOwn && 'Tú'}</span>
+                        <span className="text-[10px] text-slate-600 dark:text-slate-400">{formatTime(msg.createdAt)} {isOwn && 'Tú'}</span>
                       </div>
                       <div className={`rounded-2xl px-4 py-2.5 text-sm ${isOwn ? 'bg-blue-700 text-white rounded-tr-sm' : 'bg-slate-50 text-slate-700 rounded-tl-sm border border-slate-100 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700'}`}>
                         {msg.content}
@@ -892,7 +892,7 @@ export default function VideoCallPage() {
                 onChange={e => setNewMessage(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
                 placeholder="Escribe un mensaje..."
-                className="flex-1 bg-transparent text-sm text-slate-900 dark:text-white outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                className="flex-1 bg-transparent text-sm text-slate-900 dark:text-white outline-none placeholder:text-slate-600 dark:placeholder:text-slate-400"
               />
               <button 
                 onClick={handleSendMessage}

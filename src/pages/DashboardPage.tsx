@@ -113,7 +113,7 @@ export default function DashboardPage() {
         </div>
 
         {loading && (
-          <div className="flex items-center justify-center py-20 text-slate-500 dark:text-slate-400">
+          <div className="flex items-center justify-center py-20 text-slate-600 dark:text-slate-400">
             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
             Cargando tus salas...
           </div>
@@ -143,7 +143,7 @@ export default function DashboardPage() {
                 <p className="text-lg font-bold text-slate-900 dark:text-white">
                   Mis Salas
                 </p>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
                   {ownRooms.length} {ownRooms.length === 1 ? 'sala creada' : 'salas creadas'} · Eres administrador
                 </p>
               </div>
@@ -166,14 +166,14 @@ export default function DashboardPage() {
                           <h2 className="truncate text-base font-bold text-slate-900 dark:text-white">
                             {room.name}
                           </h2>
-                          <p className="text-xs font-medium text-slate-400 dark:text-slate-500 break-all select-all">
+                          <p className="text-xs font-medium text-slate-600 dark:text-slate-400 break-all select-all">
                             <span>ID </span>
                             <span className="font-mono">{room.id}</span>
                           </p>
                         </div>
                       </div>
 
-                      <p className="mt-4 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                      <p className="mt-4 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
                         Sala de estudio privada con acceso rápido y administración completa.
                       </p>
 
@@ -211,8 +211,8 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white/50 py-12 text-center dark:border-slate-700 dark:bg-slate-900/50">
-                  <Plus className="h-8 w-8 text-slate-300 dark:text-slate-600 mb-3" />
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">No has creado ninguna sala</p>
+                  <Plus className="h-8 w-8 text-slate-400 dark:text-slate-400 mb-3" />
+                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">No has creado ninguna sala</p>
                   <button
                     type="button"
                     onClick={() => navigate('/salas/crear')}
@@ -229,7 +229,7 @@ export default function DashboardPage() {
                 <p className="text-lg font-bold text-slate-900 dark:text-white">
                   Salas Externas
                 </p>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
                   {externalRooms.length} {externalRooms.length === 1 ? 'sala' : 'salas'} · Eres participante
                 </p>
               </div>
@@ -252,14 +252,14 @@ export default function DashboardPage() {
                           <h2 className="truncate text-base font-bold text-slate-900 dark:text-white">
                             {room.name}
                           </h2>
-                          <p className="text-xs font-medium text-slate-400 dark:text-slate-500 break-all select-all">
+                          <p className="text-xs font-medium text-slate-600 dark:text-slate-400 break-all select-all">
                             <span>ID </span>
                             <span className="font-mono">{room.id}</span>
                           </p>
                         </div>
                       </div>
 
-                      <p className="mt-4 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                      <p className="mt-4 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
                         Sala de estudio a la que te has unido.
                       </p>
 
@@ -297,8 +297,8 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white/50 py-12 text-center dark:border-slate-700 dark:bg-slate-900/50">
-                  <Key className="h-8 w-8 text-slate-300 dark:text-slate-600 mb-3" />
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">No te has unido a ninguna sala</p>
+                  <Key className="h-8 w-8 text-slate-400 dark:text-slate-400 mb-3" />
+                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">No te has unido a ninguna sala</p>
                   <button
                     type="button"
                     onClick={() => navigate('/unirse')}
@@ -346,7 +346,7 @@ export default function DashboardPage() {
         )}
 
         <div className="mt-24 pt-10 border-t border-slate-100 dark:border-slate-800">
-          <p className="text-center text-xs font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase mb-8">
+          <p className="text-center text-xs font-bold tracking-wider text-slate-650 dark:text-slate-400 uppercase mb-8">
             ¿Qué puedes hacer en Salón de Estudio?
           </p>
 
@@ -356,7 +356,7 @@ export default function DashboardPage() {
                 <Video className="h-6 w-6 text-white" />
               </div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-2">Videoconferencia</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              <p className="text-xs text-slate-650 dark:text-slate-400 leading-relaxed">
                 Conecta en tiempo real con tus compañeros usando video y audio
               </p>
             </div>
@@ -366,7 +366,7 @@ export default function DashboardPage() {
                 <MessageSquare className="h-6 w-6 text-white" />
               </div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-2">Chat Colaborativo</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              <p className="text-xs text-slate-650 dark:text-slate-400 leading-relaxed">
                 Comparte ideas, recursos y dudas con todos los participantes
               </p>
             </div>
@@ -376,7 +376,7 @@ export default function DashboardPage() {
                 <BookOpen className="h-6 w-6 text-white" />
               </div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-2">Salas Privadas</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              <p className="text-xs text-slate-650 dark:text-slate-400 leading-relaxed">
                 Crea salas con código de acceso para estudiar con tu grupo
               </p>
             </div>

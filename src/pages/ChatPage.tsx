@@ -356,7 +356,7 @@ export default function ChatPage() {
     return (
       <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
         <Loader2 className="mr-2 h-6 w-6 animate-spin text-blue-600" />
-        <span className="text-sm text-slate-500 dark:text-slate-400">Abriendo chat...</span>
+        <span className="text-sm text-slate-600 dark:text-slate-400">Abriendo chat...</span>
       </div>
     )
   }
@@ -369,7 +369,7 @@ export default function ChatPage() {
         <h1 className="text-xl font-bold text-slate-900 dark:text-white">
           No se pudo abrir el chat
         </h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400">{error || 'Sala no encontrada.'}</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">{error || 'Sala no encontrada.'}</p>
         <button
           type="button"
           onClick={() => navigate('/dashboard')}
@@ -527,7 +527,7 @@ export default function ChatPage() {
                 </div>
                 <div className="min-w-0">
                   <h2 className="text-[14px] sm:text-[15px] font-bold text-slate-900 dark:text-white leading-tight truncate">{room.name}</h2>
-                  <p className="text-[11px] sm:text-[13px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">{onlineCount} en vivo • {participants.length} total</p>
+                  <p className="text-[11px] sm:text-[13px] text-slate-650 dark:text-slate-400 mt-0.5 truncate">{onlineCount} en vivo • {participants.length} total</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -550,7 +550,7 @@ export default function ChatPage() {
           >
             {messages.length === 0 ? (
               <div className="flex h-full items-center justify-center">
-                <p className="text-sm text-slate-400 dark:text-slate-500">
+                <p className="text-sm text-slate-600 dark:text-slate-400">
                   Aún no hay mensajes. ¡Sé el primero en escribir!
                 </p>
               </div>
@@ -578,7 +578,7 @@ export default function ChatPage() {
                       {showDateSep && (
                         <div className="my-5 flex items-center gap-3">
                           <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
-                          <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
+                          <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400">
                             {formatDateSep(msg.createdAt)}
                           </span>
                           <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
@@ -619,24 +619,24 @@ export default function ChatPage() {
                                   ADMINISTRADOR
                                 </span>
                               )}
-                              <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                              <span className="text-[11px] text-slate-600 dark:text-slate-400">
                                 {formatTime(msg.createdAt)}
                               </span>
                             </div>
                           )}
                           {isOwn && (
                             <div className="mb-1 flex items-center gap-1.5 px-0.5">
-                              <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                              <span className="text-[11px] text-slate-600 dark:text-slate-400">
                                 {formatTime(msg.createdAt)}
                               </span>
-                              <span className="text-[12px] font-semibold text-slate-500 dark:text-slate-400">
+                              <span className="text-[12px] font-semibold text-slate-600 dark:text-slate-400">
                                 Tú
                               </span>
                             </div>
                           )}
                           {!showSenderInfo && !isOwn && (
                             <div className="mb-1 px-0.5">
-                              <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                              <span className="text-[11px] text-slate-600 dark:text-slate-400">
                                 {formatTime(msg.createdAt)}
                               </span>
                             </div>
@@ -730,7 +730,7 @@ export default function ChatPage() {
           {/* Participants list */}
           <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 pb-4">
             {participants.length === 0 && (
-              <p className="text-[12px] text-slate-400 dark:text-slate-500">
+              <p className="text-[12px] text-slate-600 dark:text-slate-400">
                 Sin participantes cargados.
               </p>
             )}

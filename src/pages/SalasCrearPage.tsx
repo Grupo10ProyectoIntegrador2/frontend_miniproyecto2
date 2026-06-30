@@ -78,7 +78,7 @@ export default function SalasCrearPage() {
             <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent">
               Crear Sala
             </h1>
-            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+            <p className="mt-2 text-sm text-slate-650 dark:text-slate-400">
               Completa el nombre y el sistema generará un ID único antes de enviarte al interior
             </p>
           </div>
@@ -116,7 +116,7 @@ export default function SalasCrearPage() {
                   </p>
                 )}
 
-                <p className={`text-left text-xs text-slate-500 dark:text-slate-400 ${displayError ? 'mt-3' : 'mt-1'}`}>
+                <p className={`text-left text-xs text-slate-600 dark:text-slate-400 ${displayError ? 'mt-3' : 'mt-1'}`}>
                   Usa un nombre claro para que el resto del grupo identifique la sala.
                 </p>
               </div>
