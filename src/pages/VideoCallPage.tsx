@@ -631,7 +631,7 @@ export default function VideoCallPage() {
       <div className="flex h-screen flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 p-4 transition-colors duration-200">
         <AlertCircle className="h-10 w-10 text-red-500 mb-4" />
         <h1 className="text-xl font-bold text-slate-900 dark:text-white">Error</h1>
-        <p className="text-slate-650 dark:text-slate-400 mb-4">{error || 'No se pudo cargar.'}</p>
+        <p className="text-slate-600 dark:text-slate-300 mb-4">{error || 'No se pudo cargar.'}</p>
         <button onClick={leaveCall} className="rounded-xl bg-blue-600 px-5 py-2.5 text-white hover:bg-blue-700">Volver</button>
       </div>
     )
@@ -659,7 +659,7 @@ export default function VideoCallPage() {
             <ArrowLeft size={14} />
             Volver al dashboard
           </button>
-          <div className="flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600 dark:bg-red-950/40 dark:text-red-400 truncate">
+          <div className="flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-300 truncate">
             <span className="h-2 w-2 rounded-full bg-red-600 animate-pulse shrink-0"></span>
             <span className="truncate">En vivo • {room.name}</span>
           </div>
@@ -746,11 +746,11 @@ export default function VideoCallPage() {
 
           {/* Controls Bar */}
           <div className="mt-4 flex shrink-0 items-center justify-center">
-            <div className="flex items-center gap-2 rounded-2xl bg-blue-100/50 px-6 py-3 shadow-sm backdrop-blur-md border border-blue-200/50 dark:bg-slate-800/80 dark:border-slate-700/80 transition-colors duration-200">
+            <div className="flex items-center gap-2 rounded-2xl bg-white/80 px-6 py-3 shadow-sm backdrop-blur-md border border-slate-200 dark:bg-slate-800/80 dark:border-slate-700/80 transition-colors duration-200">
               
               <button 
                 onClick={handleMicToggle}
-                className="flex flex-col items-center gap-1 rounded-xl p-2.5 text-blue-900 transition-colors hover:bg-blue-200 dark:text-slate-200 dark:hover:bg-slate-700"
+                className="flex flex-col items-center gap-1 rounded-xl p-2.5 text-slate-800 transition-colors hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700"
                 aria-label={micEnabled ? "Silenciar micrófono" : "Activar micrófono"}
                 aria-pressed={!micEnabled}
               >
@@ -760,7 +760,7 @@ export default function VideoCallPage() {
               
               <button 
                 onClick={handleCameraToggle}
-                className="flex flex-col items-center gap-1 rounded-xl p-2.5 text-blue-900 transition-colors hover:bg-blue-200 dark:text-slate-200 dark:hover:bg-slate-700"
+                className="flex flex-col items-center gap-1 rounded-xl p-2.5 text-slate-800 transition-colors hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700"
                 aria-label={cameraEnabled ? "Apagar cámara" : "Encender cámara"}
                 aria-pressed={cameraEnabled}
               >
@@ -773,7 +773,7 @@ export default function VideoCallPage() {
                 className={`flex flex-col items-center gap-1 rounded-xl p-2.5 transition-colors ${
                   isScreenSharing
                     ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
-                    : 'text-blue-900 hover:bg-blue-200 dark:text-slate-200 dark:hover:bg-slate-700'
+                    : 'text-slate-800 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700'
                 }`}
                 aria-label={isScreenSharing ? "Detener compartir pantalla" : "Compartir pantalla"}
                 aria-pressed={isScreenSharing}
@@ -786,13 +786,13 @@ export default function VideoCallPage() {
               
               <button 
                 onClick={leaveCall}
-                className="flex flex-col items-center gap-1 rounded-xl p-2.5 text-red-600 transition-colors hover:bg-red-100 dark:hover:bg-red-950/40"
+                className="flex flex-col items-center gap-1 rounded-xl p-2.5 text-red-700 transition-colors hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-950/40"
                 aria-label="Salir de la videollamada"
               >
                 <div className="rounded-full bg-red-600 p-2 text-white">
                   <PhoneOff size={16} />
                 </div>
-                <span className="text-[10px] font-bold text-red-600 dark:text-red-400">Salir</span>
+                <span className="text-[10px] font-bold text-red-700 dark:text-red-400">Salir</span>
               </button>
 
             </div>
@@ -808,7 +808,7 @@ export default function VideoCallPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <h2 className="text-sm font-bold text-slate-900 dark:text-white">Participantes</h2>
-                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
+                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300">
                   {participants.length} ONLINE
                 </span>
               </div>
@@ -871,7 +871,7 @@ export default function VideoCallPage() {
                             )}
                           </>
                         )}
-                        <span className="text-[10px] text-slate-600 dark:text-slate-400">{formatTime(msg.createdAt)} {isOwn && 'Tú'}</span>
+                        <span className="text-[10px] text-slate-600 dark:text-slate-300">{formatTime(msg.createdAt)} {isOwn && 'Tú'}</span>
                       </div>
                       <div className={`rounded-2xl px-4 py-2.5 text-sm ${isOwn ? 'bg-blue-700 text-white rounded-tr-sm' : 'bg-slate-50 text-slate-700 rounded-tl-sm border border-slate-100 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700'}`}>
                         {msg.content}
