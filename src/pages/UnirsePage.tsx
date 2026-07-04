@@ -65,7 +65,7 @@ export default function UnirsePage() {
             <h1 className="bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-3xl font-bold tracking-tight text-transparent">
               Unirse a una Sala
             </h1>
-            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+            <p className="mt-2 text-sm text-slate-650 dark:text-slate-400">
               Ingresa el ID de la sala para unirte a la sesión
             </p>
           </div>
@@ -103,7 +103,7 @@ export default function UnirsePage() {
                   </p>
                 )}
 
-                <p className={`text-left text-xs text-slate-500 dark:text-slate-400 ${displayError ? 'mt-3' : 'mt-1'}`}>
+                <p className={`text-left text-xs text-slate-600 dark:text-slate-400 ${displayError ? 'mt-3' : 'mt-1'}`}>
                   Solicita el ID al administrador de la sala.
                 </p>
               </div>

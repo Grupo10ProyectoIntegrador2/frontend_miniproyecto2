@@ -6,12 +6,13 @@ import {
   Video as VideoIcon,
   VideoOff,
   MonitorUp,
-  MoreHorizontal,
   PhoneOff,
   Send,
   ArrowLeft,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  X,
+  MessageSquare
 } from 'lucide-react'
 import { useAuth } from '../contexts/useAuth'
 import { auth } from '../lib/firebase'
@@ -51,7 +52,7 @@ function getInitials(name: string): string {
     .toUpperCase()
 }
 
-const AVATAR_COLORS = ['#6366F1', '#8B5CF6', '#EC4899', '#14B8A6', '#F59E0B', '#10B981', '#3B82F6']
+const AVATAR_COLORS = ['#4338ca', '#6d28d9', '#be185d', '#0f766e', '#b45309', '#047857', '#1d4ed8']
 function avatarColor(uid: string): string {
   let hash = 0
   for (const c of uid) hash = (hash * 31 + c.charCodeAt(0)) & 0xffff
@@ -68,14 +69,14 @@ function isAvatarImage(url?: string): boolean {
 }
 
 const PRESET_AVATAR_COLORS: Record<string, string> = {
-  'avatar-1': '#6c63ff',
-  'avatar-2': '#10b981',
-  'avatar-3': '#f59e0b',
-  'avatar-4': '#ef4444',
-  'avatar-5': '#3b82f6',
-  'avatar-6': '#ec4899',
-  'avatar-7': '#8b5cf6',
-  'avatar-8': '#14b8a6',
+  'avatar-1': '#4338ca',
+  'avatar-2': '#047857',
+  'avatar-3': '#b45309',
+  'avatar-4': '#b91c1c',
+  'avatar-5': '#1d4ed8',
+  'avatar-6': '#be185d',
+  'avatar-7': '#6d28d9',
+  'avatar-8': '#0f766e',
 }
 
 function resolveAvatarBackground(uid: string, avatarUrl?: string): string {
@@ -272,6 +273,7 @@ export default function VideoCallPage() {
   
   const [micEnabled, setMicEnabled] = useState(true)
   const [cameraEnabled, setCameraEnabled] = useState(true)
+  const [showChat, setShowChat] = useState(false)
 
   const localParticipant = useMemo(() => {
     if (!user || !room) return undefined
@@ -629,7 +631,7 @@ export default function VideoCallPage() {
       <div className="flex h-screen flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 p-4 transition-colors duration-200">
         <AlertCircle className="h-10 w-10 text-red-500 mb-4" />
         <h1 className="text-xl font-bold text-slate-900 dark:text-white">Error</h1>
-        <p className="text-slate-500 dark:text-slate-400 mb-4">{error || 'No se pudo cargar.'}</p>
+        <p className="text-slate-600 dark:text-slate-300 mb-4">{error || 'No se pudo cargar.'}</p>
         <button onClick={leaveCall} className="rounded-xl bg-blue-600 px-5 py-2.5 text-white hover:bg-blue-700">Volver</button>
       </div>
     )
@@ -647,23 +649,40 @@ export default function VideoCallPage() {
     <div className="flex h-screen flex-col overflow-hidden bg-slate-50 dark:bg-slate-950 font-sans transition-colors duration-200">
       <DashboardHeader fullWidth={true} />
 
-      <div className="flex h-10 shrink-0 items-center gap-4 border-b border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-900 px-6 transition-colors duration-200">
+      <div className="flex h-10 shrink-0 items-center justify-between border-b border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-900 px-6 transition-colors duration-200">
+        <div className="flex items-center gap-4 min-w-0">
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            className="flex items-center gap-1.5 text-sm font-medium text-slate-600 transition-colors hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 cursor-pointer"
+          >
+            <ArrowLeft size={14} />
+            Volver al dashboard
+          </button>
+          <div className="flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-300 truncate">
+            <span className="h-2 w-2 rounded-full bg-red-600 animate-pulse shrink-0"></span>
+            <span className="truncate">En vivo • {room.name}</span>
+          </div>
+        </div>
         <button
           type="button"
-          onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 cursor-pointer"
+          onClick={() => setShowChat(!showChat)}
+          className="lg:hidden flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer"
         >
-          <ArrowLeft size={14} />
-          Volver al dashboard
+          <MessageSquare size={13} />
+          {showChat ? 'Ocultar Chat' : 'Ver Chat'}
         </button>
-        <div className="flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600 dark:bg-red-950/40 dark:text-red-400">
-          <span className="h-2 w-2 rounded-full bg-red-600 animate-pulse"></span>
-          En vivo • {room.name}
-        </div>
       </div>
 
       {/* Main Layout */}
-      <main className="flex flex-1 overflow-hidden p-4 gap-4">
+      <main id="main-content" className="flex flex-1 overflow-hidden p-4 gap-4 relative">
+        {/* Backdrop for Mobile Chat Drawer */}
+        {showChat && (
+          <div
+            className="fixed inset-0 z-30 bg-black/40 backdrop-blur-xs lg:hidden"
+            onClick={() => setShowChat(false)}
+          />
+        )}
         
         {/* Left: Video Grid */}
         <div className="flex flex-1 flex-col justify-between overflow-hidden">
@@ -727,11 +746,13 @@ export default function VideoCallPage() {
 
           {/* Controls Bar */}
           <div className="mt-4 flex shrink-0 items-center justify-center">
-            <div className="flex items-center gap-2 rounded-2xl bg-blue-100/50 px-6 py-3 shadow-sm backdrop-blur-md border border-blue-200/50 dark:bg-slate-800/80 dark:border-slate-700/80 transition-colors duration-200">
+            <div className="flex items-center gap-2 rounded-2xl bg-white/80 px-6 py-3 shadow-sm backdrop-blur-md border border-slate-200 dark:bg-slate-800/80 dark:border-slate-700/80 transition-colors duration-200">
               
               <button 
                 onClick={handleMicToggle}
-                className="flex flex-col items-center gap-1 rounded-xl p-2.5 text-blue-900 transition-colors hover:bg-blue-200 dark:text-slate-200 dark:hover:bg-slate-700"
+                className="flex flex-col items-center gap-1 rounded-xl p-2.5 text-slate-800 transition-colors hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700"
+                aria-label={micEnabled ? "Silenciar micrófono" : "Activar micrófono"}
+                aria-pressed={!micEnabled}
               >
                 {micEnabled ? <Mic size={20} /> : <MicOff size={20} className="text-red-500" />}
                 <span className="text-[10px] font-medium">{micEnabled ? 'Silenciar' : 'Activar'}</span>
@@ -739,7 +760,9 @@ export default function VideoCallPage() {
               
               <button 
                 onClick={handleCameraToggle}
-                className="flex flex-col items-center gap-1 rounded-xl p-2.5 text-blue-900 transition-colors hover:bg-blue-200 dark:text-slate-200 dark:hover:bg-slate-700"
+                className="flex flex-col items-center gap-1 rounded-xl p-2.5 text-slate-800 transition-colors hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700"
+                aria-label={cameraEnabled ? "Apagar cámara" : "Encender cámara"}
+                aria-pressed={cameraEnabled}
               >
                 {cameraEnabled ? <VideoIcon size={20} /> : <VideoOff size={20} className="text-red-500" />}
                 <span className="text-[10px] font-medium">Cámara</span>
@@ -750,8 +773,10 @@ export default function VideoCallPage() {
                 className={`flex flex-col items-center gap-1 rounded-xl p-2.5 transition-colors ${
                   isScreenSharing
                     ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
-                    : 'text-blue-900 hover:bg-blue-200 dark:text-slate-200 dark:hover:bg-slate-700'
+                    : 'text-slate-800 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700'
                 }`}
+                aria-label={isScreenSharing ? "Detener compartir pantalla" : "Compartir pantalla"}
+                aria-pressed={isScreenSharing}
               >
                 <MonitorUp size={20} />
                 <span className="text-[10px] font-medium">
@@ -759,21 +784,15 @@ export default function VideoCallPage() {
                 </span>
               </button>
               
-              <button className="flex flex-col items-center gap-1 rounded-xl p-2.5 text-blue-900 transition-colors hover:bg-blue-200 dark:text-slate-200 dark:hover:bg-slate-700">
-                <MoreHorizontal size={20} />
-                <span className="text-[10px] font-medium">Más</span>
-              </button>
-              
-              <div className="mx-2 h-10 w-px bg-blue-300/50 dark:bg-slate-600" />
-              
               <button 
                 onClick={leaveCall}
-                className="flex flex-col items-center gap-1 rounded-xl p-2.5 text-red-600 transition-colors hover:bg-red-100 dark:hover:bg-red-950/40"
+                className="flex flex-col items-center gap-1 rounded-xl p-2.5 text-red-700 transition-colors hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-950/40"
+                aria-label="Salir de la videollamada"
               >
                 <div className="rounded-full bg-red-600 p-2 text-white">
                   <PhoneOff size={16} />
                 </div>
-                <span className="text-[10px] font-bold text-red-600 dark:text-red-400">Salir</span>
+                <span className="text-[10px] font-bold text-red-700 dark:text-red-400">Salir</span>
               </button>
 
             </div>
@@ -781,13 +800,25 @@ export default function VideoCallPage() {
         </div>
 
         {/* Right: Sidebar Chat */}
-        <aside className="flex w-[320px] shrink-0 flex-col overflow-hidden rounded-2xl bg-white dark:bg-slate-900 shadow-sm border border-slate-100 dark:border-slate-800 transition-colors duration-200">
+        <aside className={`
+          ${showChat ? 'flex fixed inset-y-0 right-0 z-45 shadow-xl w-80 pt-16' : 'hidden'} 
+          lg:flex lg:relative lg:w-[320px] shrink-0 flex-col overflow-hidden rounded-2xl bg-white dark:bg-slate-900 shadow-sm border border-slate-100 dark:border-slate-800 transition-all duration-200
+        `}>
           <div className="border-b border-slate-100 dark:border-slate-800 px-4 py-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-slate-900 dark:text-white">Participantes</h2>
-              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
-                {participants.length} ONLINE
-              </span>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white">Participantes</h2>
+                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300">
+                  {participants.length} ONLINE
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowChat(false)}
+                className="lg:hidden p-1 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-650 dark:hover:bg-slate-800 dark:hover:text-slate-350"
+              >
+                <X size={16} />
+              </button>
             </div>
             <div className="mt-2 flex flex-col gap-2">
               {callParticipants.map((p) => {
@@ -820,7 +851,7 @@ export default function VideoCallPage() {
           <div className="flex-1 overflow-y-auto p-4">
             {messages.length === 0 ? (
               <div className="flex h-full items-center justify-center">
-                <p className="text-center text-xs text-slate-400 dark:text-slate-500">No hay mensajes aún.</p>
+                <p className="text-center text-xs text-slate-600 dark:text-slate-400">No hay mensajes aún.</p>
               </div>
             ) : (
               <div className="flex flex-col gap-4 pb-2">
@@ -840,7 +871,7 @@ export default function VideoCallPage() {
                             )}
                           </>
                         )}
-                        <span className="text-[10px] text-slate-400 dark:text-slate-500">{formatTime(msg.createdAt)} {isOwn && 'Tú'}</span>
+                        <span className="text-[10px] text-slate-600 dark:text-slate-300">{formatTime(msg.createdAt)} {isOwn && 'Tú'}</span>
                       </div>
                       <div className={`rounded-2xl px-4 py-2.5 text-sm ${isOwn ? 'bg-blue-700 text-white rounded-tr-sm' : 'bg-slate-50 text-slate-700 rounded-tl-sm border border-slate-100 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700'}`}>
                         {msg.content}
@@ -861,11 +892,12 @@ export default function VideoCallPage() {
                 onChange={e => setNewMessage(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
                 placeholder="Escribe un mensaje..."
-                className="flex-1 bg-transparent text-sm text-slate-900 dark:text-white outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                className="flex-1 bg-transparent text-sm text-slate-900 dark:text-white outline-none placeholder:text-slate-600 dark:placeholder:text-slate-400"
               />
               <button 
                 onClick={handleSendMessage}
                 disabled={!newMessage.trim()}
+                aria-label="Enviar mensaje"
                 className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-700 text-white disabled:opacity-50 transition-transform active:scale-95 hover:bg-blue-800"
               >
                 <Send size={14} />
