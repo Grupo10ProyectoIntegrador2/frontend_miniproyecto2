@@ -8,7 +8,8 @@ import {
   CheckCircle2,
   Loader2,
   Trash2,
-  X
+  X,
+  ArrowLeft
 } from 'lucide-react'
 import { useAuth } from '../contexts/useAuth'
 import * as authService from '../services/auth.service'
@@ -93,16 +94,16 @@ export default function PerfilPage() {
   // Color mapping for avatar initials
   const getAvatarColor = (avatar: string): string => {
     const colorMap: Record<string, string> = {
-      'avatar-1': '#6c63ff',
-      'avatar-2': '#10b981',
-      'avatar-3': '#f59e0b',
-      'avatar-4': '#ef4444',
-      'avatar-5': '#3b82f6',
-      'avatar-6': '#ec4899',
-      'avatar-7': '#8b5cf6',
-      'avatar-8': '#14b8a6',
+      'avatar-1': '#4338ca',
+      'avatar-2': '#047857',
+      'avatar-3': '#b45309',
+      'avatar-4': '#b91c1c',
+      'avatar-5': '#1d4ed8',
+      'avatar-6': '#be185d',
+      'avatar-7': '#6d28d9',
+      'avatar-8': '#0f766e',
     }
-    return colorMap[avatar] || '#6c63ff'
+    return colorMap[avatar] || '#4338ca'
   }
 
   // Switch tabs handler
@@ -282,12 +283,26 @@ export default function PerfilPage() {
       <DashboardHeader />
 
       <main id="main-content" className="flex-1 mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        {/* Invisible live region for screen reader announcements */}
+        <div style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: 0 }} aria-live="polite" role="status">
+          {successMessage}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => navigate('/dashboard')}
+          className="mb-6 inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-slate-500 transition-colors hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Volver al dashboard
+        </button>
+
         {/* Title Block */}
         <div className="mb-8">
           <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
             Configuraciones
           </h1>
-          <p className="mt-2 text-slate-500 dark:text-slate-400 text-base">
+          <p className="mt-2 text-slate-650 dark:text-slate-400 text-base">
             Administra tu perfil, la visualización y las opciones de accesibilidad.
           </p>
         </div>
@@ -313,7 +328,7 @@ export default function PerfilPage() {
           {/* Sidebar Navigation */}
           <aside className="lg:col-span-1">
             <nav className="flex flex-col gap-2">
-              <span className="px-3 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">
+              <span className="px-3 text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-2">
                 Secciones
               </span>
 
@@ -359,7 +374,7 @@ export default function PerfilPage() {
                 Accesibilidad
               </button>
             </nav>
-            <p className="mt-4 px-3 text-xs text-slate-400 dark:text-slate-500 leading-relaxed hidden lg:block">
+            <p className="mt-4 px-3 text-xs text-slate-600 dark:text-slate-400 leading-relaxed hidden lg:block">
               Selecciona una sección para ajustar la experiencia del usuario.
             </p>
           </aside>
@@ -375,7 +390,7 @@ export default function PerfilPage() {
                     <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                       Editar perfil
                     </h2>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                    <p className="text-sm text-slate-650 dark:text-slate-400">
                       Actualiza tus datos personales y la información visible para otras personas.
                     </p>
                   </div>
@@ -401,7 +416,7 @@ export default function PerfilPage() {
                       <h3 className="text-lg font-bold text-slate-900 dark:text-white leading-tight">
                         {firstName || user.firstName} {lastName || user.lastName}
                       </h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      <p className="text-xs text-slate-650 dark:text-slate-400 mt-1">
                         Actualiza la imagen de tu avatar y tus datos de visualización.
                       </p>
                     </div>
@@ -409,6 +424,7 @@ export default function PerfilPage() {
                     <button
                       type="button"
                       onClick={() => setShowAvatarGrid(!showAvatarGrid)}
+                      aria-label="Cambiar avatar"
                       className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-xl text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer"
                     >
                       {showAvatarGrid ? 'Ocultar Selector' : 'Cambiar'}
@@ -517,14 +533,14 @@ export default function PerfilPage() {
                           disabled={user.provider === 'google'}
                           className={`auth-input dark:border-slate-800 dark:text-white ${
                             user.provider === 'google'
-                              ? 'opacity-60 bg-slate-50 dark:bg-slate-950/30 border-slate-200/60 dark:border-slate-800/60 cursor-not-allowed text-slate-500 dark:text-slate-500'
+                              ? 'opacity-60 bg-slate-50 dark:bg-slate-950/30 border-slate-200/60 dark:border-slate-800/60 cursor-not-allowed text-slate-600 dark:text-slate-400'
                               : 'dark:bg-slate-950'
                           } ${fieldErrors.email ? 'border-red-500 focus:ring-red-500' : ''}`}
                           placeholder="correo@institucion.edu"
                           required
                         />
                         {user.provider === 'google' ? (
-                          <span className="text-xs text-slate-400 dark:text-slate-500 italic">
+                          <span className="text-xs text-slate-600 dark:text-slate-400 italic">
                             El correo no se puede cambiar (cuenta de Google).
                           </span>
                         ) : (
@@ -571,7 +587,7 @@ export default function PerfilPage() {
                     <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                       Visualización
                     </h2>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                    <p className="text-sm text-slate-650 dark:text-slate-400">
                       Elige el tema de la pantalla y ajusta cómo se ve la interfaz.
                     </p>
                   </div>
@@ -581,7 +597,7 @@ export default function PerfilPage() {
                       <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">
                         Visualización
                       </h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                      <p className="text-xs text-slate-650 dark:text-slate-400">
                         Personaliza el tema y la densidad de la interfaz.
                       </p>
                     </div>
@@ -616,7 +632,7 @@ export default function PerfilPage() {
                     <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                       Editar perfil
                     </h2>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                    <p className="text-sm text-slate-650 dark:text-slate-400">
                       Adapta la plataforma para que sea más fácil de ver, leer y navegar según tus preferencias.
                     </p>
                   </div>
@@ -626,7 +642,7 @@ export default function PerfilPage() {
                       <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">
                         Accesibilidad
                       </h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                      <p className="text-xs text-slate-650 dark:text-slate-400">
                         Ajusta las configuraciones de legibilidad, contraste y movimiento.
                       </p>
                     </div>
@@ -700,7 +716,7 @@ export default function PerfilPage() {
               </button>
             </div>
 
-            <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+            <p className="text-sm text-slate-650 dark:text-slate-400 leading-relaxed">
               ¿Estás seguro de que deseas eliminar tu cuenta? Esta acción no se puede deshacer.
             </p>
 
